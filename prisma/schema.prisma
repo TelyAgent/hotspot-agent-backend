@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model PlatformCollectionConfig {
+  id              String   @id
+  platform        String   @unique
+  connectorId     String
+  displayName     String
+  enabled         Boolean  @default(true)
+  defaultTimezone String
+  defaultRegions  Json
+  rateLimit       Json?
+  variables       Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("platform_collection_config")
+}
+
+model CollectionJobConfig {
+  id             String   @id
+  platform       String
+  name           String
+  toolName       String
+  sourceType     String
+  enabled        Boolean  @default(true)
+  schedule       Json
+  inputTemplate  Json
+  variableRefs   Json
+  outputTarget   Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([platform])
+  @@map("collection_job_config")
+}
+
+model SourceFetchRun {
+  id          String    @id
+  platform    String
+  connectorId String
+  toolName    String
+  sourceType  String
+  status      String
+  input       Json
+  startedAt   DateTime
+  finishedAt  DateTime?
+  itemCount   Int       @default(0)
+  error       String?
+
+  @@index([platform, sourceType, startedAt])
+  @@map("source_fetch_run")
+}
+
+model XTrendSnapshot {
+  id          String   @id
+  fetchRunId  String
+  region      String
+  collectedAt DateTime
+  itemCount   Int
+  checksum    String?
+  raw         Json?
+
+  items XTrendSnapshotItem[]
+
+  @@unique([region, collectedAt])
+  @@index([fetchRunId])
+  @@map("x_trend_snapshot")
+}
+
+model XTrendSnapshotItem {
+  id               String  @id
+  xTrendSnapshotId String
+  rank             Int
+  name             String
+  query            String?
+  url              String?
+  volume           Int?
+  category         String?
+  normalizedKey    String
+  raw              Json
+
+  snapshot XTrendSnapshot @relation(fields: [xTrendSnapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([xTrendSnapshotId, normalizedKey])
+  @@map("x_trend_snapshot_item")
+}
+
+model XPost {
+  id              String   @id
+  fetchRunId      String
+  postId          String   @unique
+  authorId        String?
+  authorHandle    String
+  authorName      String?
+  text            String
+  url             String?
+  publishedAt     DateTime
+  replyToPostId   String?
+  repostedPostId  String?
+  quotedPostId    String?
+  observedAt      DateTime
+  raw             Json
+
+  @@index([authorHandle, publishedAt])
+  @@map("x_post")
+}
+
+model XPostMetric {
+  id         String   @id
+  fetchRunId String
+  postId     String
+  observedAt DateTime
+  views      Int?
+  likes      Int?
+  reposts    Int?
+  replies    Int?
+  quotes     Int?
+  bookmarks  Int?
+  raw        Json
+
+  @@unique([postId, observedAt])
+  @@map("x_post_metric")
+}
+
+model SourceSnapshot {
+  id                 String   @id
+  platform           String
+  platformSnapshotId String
+  sourceType         String
+  region             String
+  collectedAt        DateTime
+  fetchRunId         String
+  itemCount          Int
+
+  items SourceSnapshotItem[]
+
+  @@index([platform, sourceType, region, collectedAt])
+  @@map("source_snapshot")
+}
+
+model SourceSnapshotItem {
+  id               String @id
+  sourceSnapshotId String
+  platform         String
+  platformItemId   String
+  sourceType       String
+  region           String
+  rank             Int
+  title            String
+  normalizedKey    String
+  metrics          Json?
+
+  snapshot SourceSnapshot @relation(fields: [sourceSnapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceSnapshotId, normalizedKey])
+  @@map("source_snapshot_item")
+}
+
+model SourceSnapshotDiff {
+  id                 String  @id
+  platform           String
+  region             String
+  currentSnapshotId  String
+  previousSnapshotId String?
+  entered            Json
+  exited             Json
+  rankUp             Json
+  rankDown           Json
+  unchanged          Json
+  createdAt          DateTime @default(now())
+
+  @@index([platform, region, currentSnapshotId])
+  @@map("source_snapshot_diff")
+}
+
+model Signal {
+  id               String   @id
+  platformRefTable String?
+  platformRefId    String?
+  snapshotId       String?
+  fetchRunId       String
+  platform         String
+  sourceType       String
+  sourceItemId     String
+  title            String
+  summary          String?
+  text             String?
+  url              String?
+  region           String?
+  rank             Int?
+  authorHandle     String?
+  publishedAt      DateTime?
+  observedAt       DateTime
+  metrics          Json?
+  normalizedKey    String?
+  raw              Json?
+
+  @@unique([platform, sourceType, sourceItemId])
+  @@index([platform, sourceType, region, observedAt])
+  @@map("signal")
+}
