@@ -230,4 +230,67 @@ describe('TwitterApiIo tools', () => {
       'twitterapi.io x.getTrending failed for all regions: global: 402 Payment Required; United States: 402 Payment Required',
     );
   });
+
+  it('searches top posts for a trend query through twitterapi.io advanced search', async () => {
+    const fetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'success',
+        tweets: [
+          {
+            id: 'tweet_1',
+            text: 'OpenAI announces a new model rollout.',
+            url: 'https://x.com/OpenAI/status/tweet_1',
+            createdAt: '2026-08-18T00:01:00.000Z',
+            retweetCount: 10,
+            replyCount: 2,
+            likeCount: 40,
+            quoteCount: 1,
+            viewCount: 5000,
+            bookmarkCount: 3,
+            author: {
+              id: 'user_1',
+              userName: 'OpenAI',
+              name: 'OpenAI',
+            },
+          },
+        ],
+      }),
+    });
+    const tools = createTwitterApiIoTools({
+      apiKey: 'test-key',
+      fetcher,
+    });
+    const searchTool = tools.find((tool) => tool.name === 'x.searchPosts');
+
+    const output = await searchTool?.invoke({
+      query: 'OpenAI',
+      limit: 3,
+      now: '2026-08-18T00:05:00.000Z',
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://api.twitterapi.io/twitter/tweet/advanced_search?query=OpenAI&queryType=Top',
+      {
+        headers: {
+          'X-API-Key': 'test-key',
+        },
+      },
+    );
+    expect(output).toEqual({
+      platform: 'x',
+      sourceType: 'post',
+      query: 'OpenAI',
+      queryType: 'Top',
+      collectedAt: '2026-08-18T00:05:00.000Z',
+      posts: [
+        expect.objectContaining({
+          postId: 'tweet_1',
+          authorHandle: 'OpenAI',
+          text: 'OpenAI announces a new model rollout.',
+          metrics: expect.objectContaining({ views: 5000, likes: 40 }),
+        }),
+      ],
+    });
+  });
 });

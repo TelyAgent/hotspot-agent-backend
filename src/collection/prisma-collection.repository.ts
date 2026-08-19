@@ -478,6 +478,41 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
         })),
       );
   }
+
+  async findSignals(input: {
+    platform?: string;
+    sourceType?: Signal['sourceType'];
+    snapshotIds?: string[];
+  }) {
+    const signals = await this.prisma.signal.findMany({
+      where: {
+        platform: input.platform,
+        sourceType: input.sourceType,
+        snapshotId: input.snapshotIds ? { in: input.snapshotIds } : undefined,
+      },
+      orderBy: [{ rank: 'asc' }, { observedAt: 'desc' }],
+    });
+
+    return signals.map((signal) => ({
+      ...signal,
+      platformRefTable: signal.platformRefTable ?? undefined,
+      platformRefId: signal.platformRefId ?? undefined,
+      snapshotId: signal.snapshotId ?? undefined,
+      platform: signal.platform as Signal['platform'],
+      sourceType: signal.sourceType as Signal['sourceType'],
+      summary: signal.summary ?? undefined,
+      text: signal.text ?? undefined,
+      url: signal.url ?? undefined,
+      region: signal.region ?? undefined,
+      rank: signal.rank ?? undefined,
+      authorHandle: signal.authorHandle ?? undefined,
+      publishedAt: signal.publishedAt?.toISOString(),
+      observedAt: signal.observedAt.toISOString(),
+      normalizedKey: signal.normalizedKey ?? undefined,
+      metrics: signal.metrics as Signal['metrics'],
+      raw: signal.raw ?? undefined,
+    }));
+  }
 }
 
 function mapFetchRun(run: {

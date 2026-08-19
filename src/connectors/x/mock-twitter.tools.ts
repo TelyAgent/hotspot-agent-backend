@@ -1,5 +1,5 @@
 import { RuntimeTool } from '../tool-registry';
-import { XGetAccountPostsToolOutput, XTrendingToolOutput } from '../../collection/collection.types';
+import { XGetAccountPostsToolOutput, XSearchPostsToolOutput, XTrendingToolOutput } from '../../collection/collection.types';
 
 interface GetTrendingInput {
   regions?: string[];
@@ -12,6 +12,13 @@ interface GetAccountPostsInput {
   now?: string;
   since?: string;
   maxPages?: number;
+}
+
+interface SearchPostsInput {
+  query: string;
+  queryType?: 'Top' | 'Latest';
+  limit?: number;
+  now?: string;
 }
 
 export function createMockTwitterTools(): RuntimeTool[] {
@@ -82,7 +89,48 @@ export function createMockTwitterTools(): RuntimeTool[] {
         };
       },
     },
+    {
+      name: 'x.searchPosts',
+      description: 'Returns deterministic mock X top posts for local trend evidence development.',
+      async invoke(input: unknown): Promise<XSearchPostsToolOutput> {
+        const data = input as SearchPostsInput;
+        const query = data.query;
+        const collectedAt = data.now ?? new Date().toISOString();
+        const baseTime = new Date(collectedAt).getTime();
+        const limit = Math.max(1, data.limit ?? 3);
+
+        return {
+          platform: 'x',
+          sourceType: 'post',
+          query,
+          queryType: data.queryType ?? 'Top',
+          collectedAt,
+          posts: Array.from({ length: limit }, (_, index) => ({
+            postId: `mock_search_${normalizeForId(query)}_${baseTime}_${index + 1}`,
+            authorHandle: `mock_source_${index + 1}`,
+            authorId: `mock_search_user_${index + 1}`,
+            authorName: `Mock Source ${index + 1}`,
+            text: `${query} representative post ${index + 1}: people are discussing a concrete development around this trend.`,
+            url: `https://x.com/mock_source_${index + 1}/status/mock_search_${baseTime}_${index + 1}`,
+            postType: 'original' as const,
+            publishedAt: new Date(baseTime - index * 20 * 60 * 1000).toISOString(),
+            metrics: {
+              views: 5000 - index * 500,
+              likes: 200 - index * 20,
+              reposts: 40 - index * 5,
+              replies: 10 + index,
+              quotes: 3,
+            },
+            raw: { mock: true, query, index },
+          })),
+        };
+      },
+    },
   ];
+}
+
+function normalizeForId(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'query';
 }
 
 function mockTopicKeyword(handle: string) {

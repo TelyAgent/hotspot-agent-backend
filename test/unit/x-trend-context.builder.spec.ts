@@ -167,4 +167,78 @@ describe('XTrendContextBuilder', () => {
       },
     ]);
   });
+
+  it('attaches representative post signals to matching trend snapshot items', async () => {
+    const repository = new InMemoryCollectionRepository();
+    const builder = new XTrendContextBuilder(repository);
+
+    await repository.saveSourceSnapshot({
+      id: 'snapshot_us_new',
+      platform: 'x',
+      platformSnapshotId: 'x_us_new',
+      sourceType: 'trend',
+      region: 'United States',
+      collectedAt: '2026-08-18T02:00:00.000Z',
+      fetchRunId: 'fetch_new',
+      itemCount: 1,
+    });
+    await repository.saveSourceSnapshotItems([
+      {
+        id: 'item_us_new_openai',
+        sourceSnapshotId: 'snapshot_us_new',
+        platform: 'x',
+        platformItemId: 'new_openai',
+        sourceType: 'trend',
+        region: 'United States',
+        rank: 1,
+        title: 'OpenAI',
+        normalizedKey: 'openai',
+      },
+    ]);
+    await repository.saveSignals([
+      {
+        id: 'sig_post_openai',
+        platformRefTable: 'x_post',
+        platformRefId: 'tweet_1',
+        snapshotId: 'snapshot_us_new',
+        fetchRunId: 'fetch_new',
+        platform: 'x',
+        sourceType: 'post',
+        sourceItemId: 'x:trend_post:snapshot_us_new:openai:tweet_1',
+        title: 'OpenAI',
+        text: 'OpenAI launches a new model.',
+        url: 'https://x.com/OpenAI/status/tweet_1',
+        region: 'United States',
+        rank: 1,
+        authorHandle: 'OpenAI',
+        publishedAt: '2026-08-18T01:59:00.000Z',
+        observedAt: '2026-08-18T02:00:00.000Z',
+        metrics: { views: 1000, likes: 50 },
+        normalizedKey: 'openai',
+        raw: {},
+      },
+    ]);
+
+    const context = await builder.build({
+      workflowRunId: 'wrun_test',
+      observedAt: '2026-08-18T02:05:00.000Z',
+      platform: 'x',
+      sourceType: 'trend',
+      regions: ['United States'],
+    });
+
+    expect(context.currentBatch.successfulRegions[0].items[0]).toEqual(
+      expect.objectContaining({
+        title: 'OpenAI',
+        representativePosts: [
+          expect.objectContaining({
+            postId: 'tweet_1',
+            authorHandle: 'OpenAI',
+            text: 'OpenAI launches a new model.',
+            metrics: { views: 1000, likes: 50 },
+          }),
+        ],
+      }),
+    );
+  });
 });

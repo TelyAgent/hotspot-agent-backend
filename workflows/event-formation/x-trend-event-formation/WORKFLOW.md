@@ -32,6 +32,20 @@ model: default_reasoning
 
 输出前必须自检：如果 `sourceContext.regions[]` 或 `eventIntake.trendContext.regions[]` 中存在同一地区的 `previousRank` 与 `rank`，且 `previousRank - rank >= 10`，则 `sourceContext.matchedRules` 与 `eventIntake.trendContext.matchedRules` 必须包含一条 `ruleId: "TR-02"` 的规则。缺少该规则视为输出不完整。
 
+# 必须遍历的输入范围
+
+必须遍历 `currentBatch.successfulRegions[].items[]` 的所有当前榜单条目，以及 `snapshotDiffs[]` 中的所有 `rankUp[]` 条目。
+
+不得只选择最显眼、最热门或第一个命中的条目。每一个满足 TR-01、TR-02、TR-03 或 TR-04 的具体 Event 都必须输出一条命令；每一个进入规则判断但不是具体 Event 的条目都应输出 `ignore`，并在 `reason` 中说明它只是泛词、人物名、话题标签、赛事名，还是缺少可验证动作。
+
+如果同一个具体 Event 在多个地区或多个规则中命中，只输出一条命令，但 `sourceContext.regions[]` 必须合并所有出现地区，`matchedRules[]` 必须合并所有命中规则。
+
+最终输出前必须核对：
+
+- 当前任一目标地区排名 1-5 的条目都已被 create、update 或 ignore 覆盖。
+- `snapshotDiffs[].rankUp[]` 中 `rankDelta >= 10` 的条目都已被 create、update 或 ignore 覆盖。
+- 同时出现在至少两个目标地区的条目都已被 create、update 或 ignore 覆盖。
+
 # 具体 Event 判断
 
 热搜词本身不是 Event。只有能表达具体事实、动作、结果、状态、口径变化或明确传播说法时，才可以创建 Event。泛主题、人物名、公司名、赛事名或没有明确发展的关键词，应输出 ignore 或 update_event_context。

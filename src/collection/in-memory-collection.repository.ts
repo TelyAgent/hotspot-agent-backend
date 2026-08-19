@@ -192,4 +192,18 @@ export class InMemoryCollectionRepository implements CollectionRepository {
     this.signals.push(...signals);
     return signals;
   }
+
+  findSignals(input: {
+    platform?: string;
+    sourceType?: Signal['sourceType'];
+    snapshotIds?: string[];
+  }): Signal[] {
+    const snapshotIdSet = input.snapshotIds ? new Set(input.snapshotIds) : undefined;
+    return this.signals.filter(
+      (signal) =>
+        (!input.platform || signal.platform === input.platform) &&
+        (!input.sourceType || signal.sourceType === input.sourceType) &&
+        (!snapshotIdSet || Boolean(signal.snapshotId && snapshotIdSet.has(signal.snapshotId))),
+    );
+  }
 }

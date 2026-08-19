@@ -133,6 +133,15 @@ export interface XGetAccountPostsToolOutput {
   nextCursor?: string;
 }
 
+export interface XSearchPostsToolOutput {
+  platform: 'x';
+  sourceType: 'post';
+  query: string;
+  queryType: 'Top' | 'Latest';
+  collectedAt: string;
+  posts: XAccountPost[];
+}
+
 export interface XTrendSnapshot {
   id: string;
   fetchRunId: string;

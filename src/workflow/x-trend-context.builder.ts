@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { COLLECTION_REPOSITORY } from '../collection/collection.tokens';
 import { CollectionRepository } from '../collection/collection.repository';
-import { SourceSnapshot, SourceSnapshotItem, SourceType } from '../collection/collection.types';
+import { Signal, SourceSnapshot, SourceSnapshotItem, SourceType } from '../collection/collection.types';
 import { TrendRegionSnapshotContext, XTrendEventContextV1 } from './workflow.types';
 
 export interface BuildXTrendContextInput {
@@ -75,19 +75,36 @@ export class XTrendContextBuilder {
 
   private async toRegionSnapshotContext(snapshot: SourceSnapshot): Promise<TrendRegionSnapshotContext> {
     const items = await this.collectionRepository.findSourceSnapshotItems(snapshot.id);
+    const postSignals = await this.collectionRepository.findSignals({
+      platform: snapshot.platform,
+      sourceType: 'post',
+      snapshotIds: [snapshot.id],
+    });
     return {
       region: snapshot.region,
       snapshotId: snapshot.id,
       collectedAt: snapshot.collectedAt,
-      items: items.map((item) => this.toTrendSnapshotItemContext(item)),
+      items: items.map((item) => this.toTrendSnapshotItemContext(item, postSignals)),
     };
   }
 
-  private toTrendSnapshotItemContext(item: SourceSnapshotItem) {
+  private toTrendSnapshotItemContext(item: SourceSnapshotItem, postSignals: Signal[]) {
+    const representativePosts = postSignals
+      .filter((signal) => signal.normalizedKey === item.normalizedKey)
+      .map((signal) => ({
+        postId: signal.platformRefId,
+        authorHandle: signal.authorHandle,
+        text: signal.text,
+        url: signal.url,
+        publishedAt: signal.publishedAt,
+        metrics: signal.metrics,
+      }));
+
     return {
       rank: item.rank,
       title: item.title,
       normalizedKey: item.normalizedKey,
+      representativePosts,
       rawRef: {
         platform: 'x' as const,
         table: 'source_snapshot_item' as const,

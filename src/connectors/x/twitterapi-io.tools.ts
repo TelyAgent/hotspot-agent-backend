@@ -1,4 +1,4 @@
-import { XAccountPost, XGetAccountPostsToolOutput, XTrendingToolOutput } from '../../collection/collection.types';
+import { XAccountPost, XGetAccountPostsToolOutput, XSearchPostsToolOutput, XTrendingToolOutput } from '../../collection/collection.types';
 import { RuntimeTool } from '../tool-registry';
 
 type Fetcher = (url: string, init?: { headers?: Record<string, string> }) => Promise<ResponseLike>;
@@ -43,6 +43,13 @@ interface GetAccountPostsInput {
   includeReplies?: boolean;
   includeQuotes?: boolean;
   includeReposts?: boolean;
+  now?: string;
+}
+
+interface SearchPostsInput {
+  query: string;
+  queryType?: 'Top' | 'Latest';
+  limit?: number;
   now?: string;
 }
 
@@ -227,6 +234,47 @@ export function createTwitterApiIoTools(options: TwitterApiIoToolOptions = {}): 
         };
       },
     },
+    {
+      name: 'x.searchPosts',
+      description: 'Searches top X/Twitter posts for a trend query through twitterapi.io advanced search.',
+      async invoke(input: unknown): Promise<XSearchPostsToolOutput> {
+        if (!apiKey) {
+          throw new Error('TWITTERAPI_IO_KEY is required for x.searchPosts');
+        }
+        if (!fetcher) {
+          throw new Error('fetch is not available in this runtime');
+        }
+
+        const data = input as SearchPostsInput;
+        const query = data.query?.trim();
+        if (!query) {
+          throw new Error('query is required for x.searchPosts');
+        }
+
+        const queryType = data.queryType ?? 'Top';
+        const collectedAt = data.now ?? new Date().toISOString();
+        const body = await fetchAdvancedSearchPage({
+          query,
+          queryType,
+          baseUrl,
+          apiKey,
+          fetcher,
+        });
+        const limit = Math.max(1, data.limit ?? 3);
+        const posts = extractTweets(body)
+          .slice(0, limit)
+          .map((tweet) => mapTimelineTweet(tweet, tweet.author?.userName ?? 'unknown'));
+
+        return {
+          platform: 'x',
+          sourceType: 'post',
+          query,
+          queryType,
+          collectedAt,
+          posts,
+        };
+      },
+    },
   ];
 }
 
@@ -266,6 +314,26 @@ async function fetchTimelinePage(input: {
     cursor: input.cursor,
   });
   const url = `${input.baseUrl}/twitter/user/tweet_timeline?${params.toString()}`;
+  const response = await input.fetcher(url, { headers: { 'X-API-Key': input.apiKey } });
+  const body = (await response.json()) as TwitterApiIoTimelineResponse;
+  if (!response.ok || body.status === 'error') {
+    throw new Error(body.msg ?? body.message ?? `${response.status ?? ''} ${response.statusText ?? ''}`.trim());
+  }
+  return body;
+}
+
+async function fetchAdvancedSearchPage(input: {
+  query: string;
+  queryType: 'Top' | 'Latest';
+  baseUrl: string;
+  apiKey: string;
+  fetcher: Fetcher;
+}) {
+  const params = new URLSearchParams({
+    query: input.query,
+    queryType: input.queryType,
+  });
+  const url = `${input.baseUrl}/twitter/tweet/advanced_search?${params.toString()}`;
   const response = await input.fetcher(url, { headers: { 'X-API-Key': input.apiKey } });
   const body = (await response.json()) as TwitterApiIoTimelineResponse;
   if (!response.ok || body.status === 'error') {

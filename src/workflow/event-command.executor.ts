@@ -74,11 +74,17 @@ export class EventCommandExecutor {
   }
 
   private async executeUpdateEventContext(workflowRunId: string, command: UpdateEventContextCommand) {
+    const targetEventId = await this.resolveTargetEventId(command.targetEventId);
     const sourceType =
       command.evidenceRecords?.some((record) => record.sourceType === 'x_topic_circle') ? 'x_topic_circle' : 'x_trend';
-    await this.saveEventSourceContext(workflowRunId, command.targetEventId, sourceType, command.sourceContextPatch);
-    await this.saveEvidenceRecords(workflowRunId, command.targetEventId, command.evidenceRecords ?? []);
-    return command.targetEventId;
+    await this.saveEventSourceContext(workflowRunId, targetEventId, sourceType, command.sourceContextPatch);
+    await this.saveEvidenceRecords(workflowRunId, targetEventId, command.evidenceRecords ?? []);
+    return targetEventId;
+  }
+
+  private async resolveTargetEventId(targetEventId: string) {
+    const event = await this.workflowRepository.findEventByNormalizedKey(targetEventId);
+    return event?.id ?? targetEventId;
   }
 
   private async executeIgnore(workflowRunId: string, command: IgnoreSignalCommand, now: string) {

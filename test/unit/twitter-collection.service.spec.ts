@@ -59,7 +59,8 @@ describe('TwitterCollectionService', () => {
     expect(repository.xTrendSnapshots).toHaveLength(2);
     expect(repository.xTrendSnapshotItems).toHaveLength(4);
     expect(repository.sourceSnapshots).toHaveLength(2);
-    expect(repository.signals).toHaveLength(4);
+    expect(repository.signals.filter((signal) => signal.sourceType === 'trend')).toHaveLength(4);
+    expect(repository.signals.filter((signal) => signal.sourceType === 'post')).toHaveLength(40);
     expect(repository.signals[0]).toEqual(
       expect.objectContaining({
         platform: 'x',
@@ -132,6 +133,101 @@ describe('TwitterCollectionService', () => {
       observedAt: '2026-08-18T00:00:00.000Z',
       regions: ['US', 'JP'],
     });
+  });
+
+  it('collects and stores representative top posts for each trend item', async () => {
+    const platformConfig: PlatformCollectionConfig = {
+      id: 'x-default',
+      platform: 'x',
+      connectorId: 'x-mock',
+      displayName: 'X Mock',
+      enabled: true,
+      defaultTimezone: 'Asia/Shanghai',
+      defaultRegions: ['US'],
+      variables: {
+        regions: ['US'],
+        defaultTrendLimit: 1,
+        defaultPostLimit: 3,
+      },
+    };
+    const jobConfig: CollectionJobConfig = {
+      id: 'x-trending-default',
+      platform: 'x',
+      name: 'X trending',
+      toolName: 'x.getTrending',
+      sourceType: 'trend',
+      enabled: true,
+      schedule: { type: 'cron', value: '0 */2 * * *' },
+      inputTemplate: {
+        regions: '{{platform.variables.regions}}',
+        limit: '{{platform.variables.defaultTrendLimit}}',
+      },
+      variableRefs: ['platform.variables.regions', 'platform.variables.defaultTrendLimit'],
+      outputTarget: {
+        platformTables: ['x_trend_snapshot', 'x_trend_snapshot_item'],
+        emitSignal: true,
+        emitSnapshot: true,
+        emitSnapshotDiff: true,
+      },
+    };
+    const tools = new ToolRegistry();
+    tools.register({
+      name: 'x.getTrending',
+      description: 'trend tool',
+      invoke: async () => [
+        {
+          platform: 'x',
+          sourceType: 'trend',
+          region: 'US',
+          collectedAt: '2026-08-18T00:00:00.000Z',
+          items: [{ rank: 1, name: 'OpenAI', query: 'OpenAI', raw: {} }],
+          raw: {},
+        },
+      ],
+    });
+    tools.register({
+      name: 'x.searchPosts',
+      description: 'post search tool',
+      invoke: async () => ({
+        platform: 'x',
+        sourceType: 'post',
+        query: 'OpenAI',
+        queryType: 'Top',
+        collectedAt: '2026-08-18T00:00:00.000Z',
+        posts: [
+          {
+            postId: 'tweet_1',
+            authorHandle: 'OpenAI',
+            text: 'OpenAI launches a new model.',
+            postType: 'original',
+            publishedAt: '2026-08-18T00:00:00.000Z',
+            metrics: { views: 1000, likes: 50 },
+            raw: {},
+          },
+        ],
+      }),
+    });
+    const repository = new InMemoryCollectionRepository();
+    const service = new TwitterCollectionService(repository, tools);
+
+    await service.runTrendingJob({
+      platformConfig,
+      jobConfig,
+      now: '2026-08-18T00:00:00.000Z',
+    });
+
+    expect(repository.signals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sourceType: 'trend', normalizedKey: 'openai' }),
+        expect.objectContaining({
+          sourceType: 'post',
+          title: 'OpenAI',
+          normalizedKey: 'openai',
+          authorHandle: 'OpenAI',
+          text: 'OpenAI launches a new model.',
+        }),
+      ]),
+    );
   });
 
   it('keeps the collection run successful when workflow triggering fails', async () => {
@@ -310,7 +406,7 @@ describe('TwitterCollectionService', () => {
     expect(result.fetchRun).toEqual(
       expect.objectContaining({
         status: 'partial_success',
-        itemCount: 1,
+        itemCount: 4,
         error: 'database write failed',
       }),
     );

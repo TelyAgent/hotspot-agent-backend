@@ -3,6 +3,7 @@ import {
   CollectionState,
   PlatformCollectionConfig,
   Signal,
+  SourceType,
   SourceFetchRun,
   SourceSnapshot,
   SourceSnapshotDiff,
@@ -60,4 +61,9 @@ export interface CollectionRepository {
   saveSourceSnapshotDiff(diff: SourceSnapshotDiff): MaybePromise<SourceSnapshotDiff>;
   findSourceSnapshotDiffs(input: { currentSnapshotIds: string[] }): MaybePromise<SourceSnapshotDiff[]>;
   saveSignals(signals: Signal[]): MaybePromise<Signal[]>;
+  findSignals(input: {
+    platform?: string;
+    sourceType?: SourceType;
+    snapshotIds?: string[];
+  }): MaybePromise<Signal[]>;
 }

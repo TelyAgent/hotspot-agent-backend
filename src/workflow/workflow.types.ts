@@ -56,6 +56,14 @@ export interface TrendSnapshotItemContext {
   query?: string;
   normalizedKey: string;
   url?: string;
+  representativePosts?: {
+    postId?: string;
+    authorHandle?: string;
+    text?: string;
+    url?: string;
+    publishedAt?: string;
+    metrics?: Record<string, number | undefined>;
+  }[];
   rawRef: {
     platform: 'x';
     table: 'x_trend_snapshot_item' | 'source_snapshot_item';

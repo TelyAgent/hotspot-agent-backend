@@ -110,6 +110,11 @@ describe('PrismaCollectionRepository', () => {
         normalizedKey: 'openai us',
       },
     ]);
+    const signals = await repository.findSignals({
+      platform: 'x',
+      sourceType: 'trend',
+      snapshotIds: [sourceSnapshot.id],
+    });
     await repository.updateFetchRun(fetchRun.id, {
       status: 'success',
       finishedAt: '2026-08-18T00:00:01.000Z',
@@ -121,5 +126,6 @@ describe('PrismaCollectionRepository', () => {
     expect(await prisma.sourceSnapshot.count()).toBe(1);
     expect(await prisma.sourceSnapshotDiff.count()).toBe(1);
     expect(await prisma.signal.count()).toBe(1);
+    expect(signals).toEqual([expect.objectContaining({ id: 'sig_test', normalizedKey: 'openai us' })]);
   });
 });

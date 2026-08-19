@@ -141,6 +141,46 @@ describe('EventCommandExecutor', () => {
     expect(repository.eventEvidence).toHaveLength(1);
   });
 
+  it('resolves update targetEventId from normalized event key when the model returns a key instead of an id', async () => {
+    const repository = new InMemoryWorkflowRepository();
+    const executor = new EventCommandExecutor(repository);
+    repository.events.push({
+      id: 'event_baleba',
+      title: 'Baleba',
+      normalizedEventKey: 'baleba',
+      status: 'responding',
+      confidence: 'medium',
+      formedAt: '2026-08-19T09:21:00.000Z',
+      updatedAt: '2026-08-19T09:21:00.000Z',
+    });
+    const command: UpdateEventContextCommand = {
+      type: 'update_event_context',
+      idempotencyKey: 'update:baleba:tr02',
+      targetEventId: 'baleba',
+      reason: 'Model used normalized key as target.',
+      sourceContextPatch: { regions: [{ region: 'global', rank: 2, snapshotId: 'snapshot_global_new', representativePosts: [] }] },
+      evidenceRecords: [],
+      startResponsePipeline: false,
+    };
+
+    const execution = await executor.execute({
+      workflowRunId: 'wrun_test',
+      workflowCommandId: 'cmd_update_key',
+      command,
+      now: '2026-08-19T09:22:00.000Z',
+    });
+
+    expect(execution).toMatchObject({
+      status: 'success',
+      targetEventId: 'event_baleba',
+    });
+    expect(repository.eventSourceContexts).toEqual([
+      expect.objectContaining({
+        eventId: 'event_baleba',
+      }),
+    ]);
+  });
+
   it('persists ignored signals', async () => {
     const repository = new InMemoryWorkflowRepository();
     const executor = new EventCommandExecutor(repository);

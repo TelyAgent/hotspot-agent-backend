@@ -14,8 +14,10 @@ import {
   SourceSnapshotDiff,
   SourceSnapshotItem,
   TrendDiffItem,
+  XSearchPostsToolOutput,
   XTrendingToolOutput,
   XTrendSnapshot,
+  XTrendSnapshotItem,
 } from './collection.types';
 
 export interface RunTrendingJobInput {
@@ -88,7 +90,9 @@ export class TwitterCollectionService {
     let finished: SourceFetchRun;
     try {
       for (const regionOutput of toolOutput) {
-        const saved = await this.saveTrendingRegion(fetchRun.id, regionOutput);
+        const saved = await this.saveTrendingRegion(fetchRun.id, regionOutput, {
+          postLimit: this.resolvePostLimit(input.platformConfig),
+        });
         snapshots.push(saved.sourceSnapshot);
         signals.push(...saved.signals);
         itemCount += saved.signals.length;
@@ -172,7 +176,11 @@ export class TwitterCollectionService {
     }
   }
 
-  private async saveTrendingRegion(fetchRunId: string, output: XTrendingToolOutput) {
+  private async saveTrendingRegion(
+    fetchRunId: string,
+    output: XTrendingToolOutput,
+    options: { postLimit: number },
+  ) {
     const xSnapshot: XTrendSnapshot = await this.repository.saveXTrendSnapshot({
       id: `xtrend_${randomUUID()}`,
       fetchRunId,
@@ -240,11 +248,70 @@ export class TwitterCollectionService {
         raw: item.raw,
       })),
     );
+    const postSignals = await this.collectTrendEvidencePosts({
+      fetchRunId,
+      sourceSnapshot,
+      xItems,
+      postLimit: options.postLimit,
+      collectedAt: output.collectedAt,
+    });
+    signals.push(...postSignals);
     await this.repository.saveSourceSnapshotDiff(
       await this.createDiff(sourceSnapshot, sourceItems),
     );
 
     return { sourceSnapshot, signals };
+  }
+
+  private async collectTrendEvidencePosts(input: {
+    fetchRunId: string;
+    sourceSnapshot: SourceSnapshot;
+    xItems: XTrendSnapshotItem[];
+    postLimit: number;
+    collectedAt: string;
+  }): Promise<Signal[]> {
+    const signals: Signal[] = [];
+    for (const item of input.xItems) {
+      try {
+        const output = await this.tools.invoke<XSearchPostsToolOutput>('x.searchPosts', {
+          query: item.query ?? item.name,
+          queryType: 'Top',
+          limit: input.postLimit,
+          now: input.collectedAt,
+        });
+        const saved = await this.repository.saveSignals(
+          output.posts.map((post, index) => ({
+            id: `sig_${randomUUID()}`,
+            platformRefTable: 'x_post',
+            platformRefId: post.postId,
+            snapshotId: input.sourceSnapshot.id,
+            fetchRunId: input.fetchRunId,
+            platform: 'x',
+            sourceType: 'post',
+            sourceItemId: `x:trend_post:${input.sourceSnapshot.id}:${item.normalizedKey}:${post.postId}`,
+            title: item.name,
+            text: post.text,
+            url: post.url,
+            region: input.sourceSnapshot.region,
+            rank: index + 1,
+            authorHandle: post.authorHandle,
+            publishedAt: post.publishedAt,
+            observedAt: output.collectedAt,
+            metrics: post.metrics,
+            normalizedKey: item.normalizedKey,
+            raw: post.raw,
+          })),
+        );
+        signals.push(...saved);
+      } catch (error) {
+        this.logger.warn(
+          `X trend evidence posts skipped region=${input.sourceSnapshot.region}, trend=${item.name}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+    return signals;
   }
 
   private async createDiff(currentSnapshot: SourceSnapshot, currentItems: SourceSnapshotItem[]): Promise<SourceSnapshotDiff> {
@@ -302,6 +369,10 @@ export class TwitterCollectionService {
 
   private checksum(values: string[]) {
     return values.join('|');
+  }
+
+  private resolvePostLimit(platformConfig: PlatformCollectionConfig) {
+    return Math.max(1, platformConfig.variables.defaultPostLimit ?? 3);
   }
 }
 

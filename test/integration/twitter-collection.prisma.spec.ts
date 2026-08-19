@@ -48,6 +48,8 @@ describe('TwitterCollectionService with Prisma', () => {
     expect(await prisma.sourceSnapshot.count()).toBe(1);
     expect(await prisma.sourceSnapshotItem.count()).toBe(2);
     expect(await prisma.sourceSnapshotDiff.count()).toBe(1);
-    expect(await prisma.signal.count()).toBe(2);
+    expect(await prisma.signal.count()).toBe(8);
+    expect(await prisma.signal.count({ where: { sourceType: 'trend' } })).toBe(2);
+    expect(await prisma.signal.count({ where: { sourceType: 'post' } })).toBe(6);
   });
 });
