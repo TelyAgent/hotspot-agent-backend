@@ -23,6 +23,10 @@ export interface CollectionRepository {
     patch: Partial<Pick<PlatformCollectionConfig, 'variables' | 'enabled' | 'defaultRegions'>>,
   ): MaybePromise<PlatformCollectionConfig>;
   findJobConfig(jobId: string): MaybePromise<CollectionJobConfig | undefined>;
+  updateJobConfig(
+    jobId: string,
+    patch: Partial<Pick<CollectionJobConfig, 'enabled' | 'schedule' | 'inputTemplate' | 'variableRefs' | 'outputTarget'>>,
+  ): MaybePromise<CollectionJobConfig>;
   listJobConfigs(platform: string): MaybePromise<CollectionJobConfig[]>;
   saveFetchRun(fetchRun: SourceFetchRun): MaybePromise<SourceFetchRun>;
   updateFetchRun(id: string, patch: Partial<SourceFetchRun>): MaybePromise<SourceFetchRun>;

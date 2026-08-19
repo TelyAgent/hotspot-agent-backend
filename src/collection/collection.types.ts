@@ -20,9 +20,26 @@ export interface PlatformCollectionConfig {
     monitoredAccounts?: string[];
     topicKeywords?: string[];
     topicNegativeKeywords?: string[];
+    topicConfigs?: TopicTrackingConfig[];
+    trendCollectionCron?: string;
+    trendEventWorkflowId?: string;
     defaultTrendLimit?: number;
     defaultPostLimit?: number;
   };
+}
+
+export interface TopicTrackingConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  keywords: string[];
+  positiveExamples: string[];
+  negativeExamples: string[];
+  action: string;
+  accounts: string[];
+  collectionFrequency: string;
+  workflowId: string;
+  defaultPostLimit: number;
 }
 
 export interface CollectionJobConfig {

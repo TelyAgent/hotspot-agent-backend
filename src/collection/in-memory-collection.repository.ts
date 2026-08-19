@@ -58,6 +58,18 @@ export class InMemoryCollectionRepository implements CollectionRepository {
     return this.jobConfigs.find((config) => config.id === jobId);
   }
 
+  updateJobConfig(
+    jobId: string,
+    patch: Partial<Pick<CollectionJobConfig, 'enabled' | 'schedule' | 'inputTemplate' | 'variableRefs' | 'outputTarget'>>,
+  ): CollectionJobConfig {
+    const existing = this.findJobConfig(jobId);
+    if (!existing) {
+      throw new Error(`Collection job not found: ${jobId}`);
+    }
+    Object.assign(existing, patch);
+    return existing;
+  }
+
   listJobConfigs(platform: string): CollectionJobConfig[] {
     return this.jobConfigs.filter((config) => config.platform === platform);
   }

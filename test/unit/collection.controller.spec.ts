@@ -49,4 +49,44 @@ describe('CollectionController', () => {
       error: 'twitterapi.io x.getTrending failed for all regions: global: 402 Payment Required',
     });
   });
+
+  it('updates collection job schedule from settings', async () => {
+    const repository = new InMemoryCollectionRepository(createDefaultCollectionState());
+    const tools = new ToolRegistry();
+    createMockTwitterTools().forEach((tool) => tools.register(tool));
+    const service = new TwitterCollectionService(repository, tools);
+    const controller = new CollectionController(repository, service);
+
+    const updated = await controller.updateJobConfig('x-trending-default', {
+      schedule: { type: 'cron', value: '0 */2 * * *' },
+      enabled: true,
+    });
+
+    expect(updated.schedule).toEqual({ type: 'cron', value: '0 */2 * * *' });
+    expect(updated.enabled).toBe(true);
+  });
+
+  it('saves Twitter settings as one platform config payload and syncs the trend job schedule', async () => {
+    const repository = new InMemoryCollectionRepository(createDefaultCollectionState());
+    const tools = new ToolRegistry();
+    createMockTwitterTools().forEach((tool) => tools.register(tool));
+    const service = new TwitterCollectionService(repository, tools);
+    const controller = new CollectionController(repository, service);
+
+    const updated = await controller.updatePlatformConfig('x', {
+      defaultRegions: ['global', 'Japan'],
+      variables: {
+        regions: ['global', 'Japan'],
+        trendCollectionCron: '0 */4 * * *',
+        trendEventWorkflowId: 'custom-trend-workflow',
+      },
+    });
+    const trendJob = await repository.findJobConfig('x-trending-default');
+
+    expect(updated.defaultRegions).toEqual(['global', 'Japan']);
+    expect(updated.variables.regions).toEqual(['global', 'Japan']);
+    expect(updated.variables.trendCollectionCron).toBe('0 */4 * * *');
+    expect(updated.variables.trendEventWorkflowId).toBe('custom-trend-workflow');
+    expect(trendJob?.schedule).toEqual({ type: 'cron', value: '0 */4 * * *' });
+  });
 });

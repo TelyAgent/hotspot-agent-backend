@@ -13,6 +13,14 @@ interface RunJobBody {
   overrideVariables?: Record<string, unknown>;
 }
 
+interface UpdateJobConfigBody {
+  enabled?: boolean;
+  schedule?: {
+    type: 'cron' | 'interval';
+    value: string;
+  };
+}
+
 @Controller('collection')
 export class CollectionController {
   constructor(
@@ -40,7 +48,21 @@ export class CollectionController {
     @Param('platform') platform: string,
     @Body() body: UpdatePlatformConfigBody,
   ) {
-    return this.repository.updatePlatformConfig(platform, body);
+    const updated = await this.repository.updatePlatformConfig(platform, body);
+    const trendCollectionCron = body.variables?.trendCollectionCron;
+
+    if (platform === 'x' && typeof trendCollectionCron === 'string' && trendCollectionCron.trim()) {
+      await this.repository.updateJobConfig('x-trending-default', {
+        schedule: { type: 'cron', value: trendCollectionCron.trim() },
+      });
+    }
+
+    return updated;
+  }
+
+  @Patch('jobs/:jobId/config')
+  async updateJobConfig(@Param('jobId') jobId: string, @Body() body: UpdateJobConfigBody) {
+    return this.repository.updateJobConfig(jobId, body);
   }
 
   @Post('jobs/:jobId/run')

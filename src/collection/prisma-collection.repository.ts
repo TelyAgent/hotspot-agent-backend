@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createDefaultCollectionState, mergePlatformCollectionConfigDefaults } from './default-collection-state';
 import { CollectionRepository } from './collection.repository';
@@ -138,7 +139,7 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
       data: {
         enabled: patch.enabled,
         defaultRegions: patch.defaultRegions,
-        variables: nextVariables,
+        variables: nextVariables as Prisma.InputJsonValue,
       },
     });
     await this.refreshConfigs();
@@ -152,6 +153,28 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
   async findJobConfig(jobId: string) {
     await this.refreshConfigs();
     return this.jobConfigs.find((config) => config.id === jobId);
+  }
+
+  async updateJobConfig(
+    jobId: string,
+    patch: Partial<Pick<CollectionJobConfig, 'enabled' | 'schedule' | 'inputTemplate' | 'variableRefs' | 'outputTarget'>>,
+  ) {
+    await this.prisma.collectionJobConfig.update({
+      where: { id: jobId },
+      data: {
+        enabled: patch.enabled,
+        schedule: patch.schedule as any,
+        inputTemplate: patch.inputTemplate as any,
+        variableRefs: patch.variableRefs as any,
+        outputTarget: patch.outputTarget as any,
+      },
+    });
+    await this.refreshConfigs();
+    const updated = this.jobConfigs.find((config) => config.id === jobId);
+    if (!updated) {
+      throw new Error(`Collection job not found after update: ${jobId}`);
+    }
+    return updated;
   }
 
   async listJobConfigs(platform: string) {
