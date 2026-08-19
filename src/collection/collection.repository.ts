@@ -32,7 +32,7 @@ export interface CollectionRepository {
     platform: string;
     toolName: string;
     sourceType: string;
-    status?: SourceFetchRun['status'];
+    status?: SourceFetchRun['status'] | SourceFetchRun['status'][];
   }): MaybePromise<SourceFetchRun | undefined>;
   saveFetchRun(fetchRun: SourceFetchRun): MaybePromise<SourceFetchRun>;
   updateFetchRun(id: string, patch: Partial<SourceFetchRun>): MaybePromise<SourceFetchRun>;

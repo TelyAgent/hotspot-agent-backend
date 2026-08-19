@@ -59,6 +59,9 @@ export class TwitterCollectionService {
       runtime: { now: input.now },
       overrideVariables: input.overrideVariables,
     });
+    this.logger.log(
+      `Start X trending collection job=${input.jobConfig.id}, regions=${JSON.stringify(toolInput.regions ?? [])}, limit=${String(toolInput.limit ?? '')}`,
+    );
     const fetchRun = await this.repository.saveFetchRun({
       id: `run_${randomUUID()}`,
       platform: 'x',
@@ -73,25 +76,46 @@ export class TwitterCollectionService {
 
     const toolResult = await this.invokeTrendingTool(input, fetchRun.id, toolInput);
     if (toolResult.status === 'failed') {
+      this.logger.warn(`X trending collection failed before persistence, run=${toolResult.fetchRun.id}, error=${toolResult.fetchRun.error ?? 'unknown'}`);
       return { fetchRun: toolResult.fetchRun, toolInput, snapshots: [], signals: [] };
     }
     const toolOutput = toolResult.output;
+    this.logger.log(`X trending tool returned ${toolOutput.length} region(s), run=${fetchRun.id}`);
     const snapshots: SourceSnapshot[] = [];
     const signals: Signal[] = [];
     let itemCount = 0;
 
-    for (const regionOutput of toolOutput) {
-      const saved = await this.saveTrendingRegion(fetchRun.id, regionOutput);
-      snapshots.push(saved.sourceSnapshot);
-      signals.push(...saved.signals);
-      itemCount += saved.signals.length;
-    }
+    let finished: SourceFetchRun;
+    try {
+      for (const regionOutput of toolOutput) {
+        const saved = await this.saveTrendingRegion(fetchRun.id, regionOutput);
+        snapshots.push(saved.sourceSnapshot);
+        signals.push(...saved.signals);
+        itemCount += saved.signals.length;
+        this.logger.log(
+          `Saved X trending region=${regionOutput.region}, items=${regionOutput.items.length}, snapshot=${saved.sourceSnapshot.id}, run=${fetchRun.id}`,
+        );
+      }
 
-    const finished = await this.repository.updateFetchRun(fetchRun.id, {
-      status: 'success',
-      finishedAt: input.now,
-      itemCount,
-    });
+      finished = await this.repository.updateFetchRun(fetchRun.id, {
+        status: 'success',
+        finishedAt: input.now,
+        itemCount,
+      });
+      this.logger.log(`X trending collection success, run=${finished.id}, snapshots=${snapshots.length}, itemCount=${itemCount}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      finished = await this.repository.updateFetchRun(fetchRun.id, {
+        status: snapshots.length > 0 ? 'partial_success' : 'failed',
+        finishedAt: input.now,
+        itemCount,
+        error: message,
+      });
+      this.logger.warn(
+        `X trending collection ${finished.status}, run=${finished.id}, persistedSnapshots=${snapshots.length}, itemCount=${itemCount}, error=${message}`,
+      );
+      return { fetchRun: finished, toolInput, snapshots, signals };
+    }
 
     const workflowRun = await this.triggerEventFormationWorkflow(input.now, snapshots);
 

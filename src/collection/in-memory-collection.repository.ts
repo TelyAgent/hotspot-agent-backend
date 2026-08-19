@@ -78,15 +78,16 @@ export class InMemoryCollectionRepository implements CollectionRepository {
     platform: string;
     toolName: string;
     sourceType: string;
-    status?: SourceFetchRun['status'];
+    status?: SourceFetchRun['status'] | SourceFetchRun['status'][];
   }): SourceFetchRun | undefined {
+    const statuses = Array.isArray(input.status) ? input.status : input.status ? [input.status] : [];
     return [...this.fetchRuns]
       .filter(
         (run) =>
           run.platform === input.platform &&
           run.toolName === input.toolName &&
           run.sourceType === input.sourceType &&
-          (!input.status || run.status === input.status),
+          (statuses.length === 0 || statuses.includes(run.status)),
       )
       .sort((left, right) => right.startedAt.localeCompare(left.startedAt))[0];
   }

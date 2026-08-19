@@ -252,4 +252,69 @@ describe('TwitterCollectionService', () => {
       }),
     );
   });
+
+  it('marks the fetch run partial_success when persistence fails after some regions were saved', async () => {
+    const platformConfig: PlatformCollectionConfig = {
+      id: 'x-default',
+      platform: 'x',
+      connectorId: 'x-mock',
+      displayName: 'X Mock',
+      enabled: true,
+      defaultTimezone: 'Asia/Shanghai',
+      defaultRegions: ['US', 'JP'],
+      variables: {
+        regions: ['US', 'JP'],
+        defaultTrendLimit: 1,
+      },
+    };
+    const jobConfig: CollectionJobConfig = {
+      id: 'x-trending-default',
+      platform: 'x',
+      name: 'X trending',
+      toolName: 'x.getTrending',
+      sourceType: 'trend',
+      enabled: true,
+      schedule: { type: 'cron', value: '0 */2 * * *' },
+      inputTemplate: {
+        regions: '{{platform.variables.regions}}',
+        limit: '{{platform.variables.defaultTrendLimit}}',
+      },
+      variableRefs: ['platform.variables.regions', 'platform.variables.defaultTrendLimit'],
+      outputTarget: {
+        platformTables: ['x_trend_snapshot', 'x_trend_snapshot_item'],
+        emitSignal: true,
+        emitSnapshot: true,
+        emitSnapshotDiff: true,
+      },
+    };
+    const tools = new ToolRegistry();
+    createMockTwitterTools().forEach((tool) => tools.register(tool));
+    const repository = new InMemoryCollectionRepository();
+    const originalSaveSourceSnapshot = repository.saveSourceSnapshot.bind(repository);
+    let saveCount = 0;
+    repository.saveSourceSnapshot = jest.fn((snapshot) => {
+      saveCount += 1;
+      if (saveCount === 2) {
+        throw new Error('database write failed');
+      }
+      return originalSaveSourceSnapshot(snapshot);
+    });
+    const service = new TwitterCollectionService(repository, tools);
+
+    const result = await service.runTrendingJob({
+      platformConfig,
+      jobConfig,
+      now: '2026-08-18T00:00:00.000Z',
+    });
+
+    expect(result.fetchRun).toEqual(
+      expect.objectContaining({
+        status: 'partial_success',
+        itemCount: 1,
+        error: 'database write failed',
+      }),
+    );
+    expect(repository.fetchRuns[0]).toEqual(expect.objectContaining({ status: 'partial_success' }));
+    expect(repository.sourceSnapshots).toHaveLength(1);
+  });
 });

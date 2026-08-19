@@ -27,6 +27,7 @@ export class CollectionSchedulerService {
         continue;
       }
       if (await this.isJobDue(job)) {
+        this.logger.log(`Collection job ${job.id} is due, start running`);
         await this.runJob(job.id);
       }
     }
@@ -54,6 +55,7 @@ export class CollectionSchedulerService {
         jobConfig,
         now: new Date().toISOString(),
       });
+      this.logger.log(`Collection job ${jobId} finished`);
     } catch (error) {
       this.logger.error(
         `Collection job ${jobId} failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -83,7 +85,7 @@ export class CollectionSchedulerService {
       platform: job.platform,
       toolName: job.toolName,
       sourceType: job.sourceType,
-      status: 'success',
+      status: ['success', 'partial_success'],
     });
     if (!latest) return true;
     return Date.now() - new Date(latest.startedAt).getTime() >= intervalMs;

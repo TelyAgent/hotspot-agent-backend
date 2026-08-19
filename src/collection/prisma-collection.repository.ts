@@ -186,14 +186,14 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
     platform: string;
     toolName: string;
     sourceType: string;
-    status?: SourceFetchRun['status'];
+    status?: SourceFetchRun['status'] | SourceFetchRun['status'][];
   }) {
     const run = await this.prisma.sourceFetchRun.findFirst({
       where: {
         platform: input.platform,
         toolName: input.toolName,
         sourceType: input.sourceType,
-        status: input.status,
+        status: Array.isArray(input.status) ? { in: input.status } : input.status,
       },
       orderBy: { startedAt: 'desc' },
     });
