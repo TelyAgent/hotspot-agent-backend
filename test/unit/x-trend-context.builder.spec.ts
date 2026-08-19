@@ -100,4 +100,71 @@ describe('XTrendContextBuilder', () => {
     });
     expect(context.snapshotDiffs).toEqual([expect.objectContaining({ id: 'diff_us_new' })]);
   });
+
+  it('includes enabled topic configs for semantic trend event rules', async () => {
+    const repository = new InMemoryCollectionRepository({
+      platformConfigs: [
+        {
+          id: 'x-default',
+          platform: 'x',
+          connectorId: 'x-twitterapi-io',
+          displayName: 'X',
+          enabled: true,
+          defaultTimezone: 'Asia/Shanghai',
+          defaultRegions: ['global'],
+          variables: {
+            topicConfigs: [
+              {
+                id: 'topic-ai',
+                name: 'AI 与科技',
+                enabled: true,
+                keywords: ['OpenAI', 'GPT'],
+                positiveExamples: ['模型发布、能力升级、价格或 API 改动'],
+                negativeExamples: ['个人使用 AI 的技巧帖但没有行业事件'],
+                action: '立即自动响应',
+                accounts: ['OpenAI'],
+                collectionFrequency: '每 3 小时',
+                workflowId: 'x-topic-circle-event-formation',
+                defaultPostLimit: 30,
+              },
+              {
+                id: 'topic-disabled',
+                name: '停用主题',
+                enabled: false,
+                keywords: ['skip-me'],
+                positiveExamples: [],
+                negativeExamples: [],
+                action: '立即自动响应',
+                accounts: [],
+                collectionFrequency: '每 3 小时',
+                workflowId: 'x-topic-circle-event-formation',
+                defaultPostLimit: 30,
+              },
+            ],
+          },
+        },
+      ],
+      jobConfigs: [],
+    });
+    const builder = new XTrendContextBuilder(repository);
+
+    const context = await builder.build({
+      workflowRunId: 'wrun_test',
+      observedAt: '2026-08-18T02:05:00.000Z',
+      platform: 'x',
+      sourceType: 'trend',
+      regions: ['global'],
+    });
+
+    expect(context.configuredTopics).toEqual([
+      {
+        id: 'topic-ai',
+        name: 'AI 与科技',
+        enabled: true,
+        semanticKeywords: ['OpenAI', 'GPT'],
+        positiveExamples: ['模型发布、能力升级、价格或 API 改动'],
+        negativeExamples: ['个人使用 AI 的技巧帖但没有行业事件'],
+      },
+    ]);
+  });
 });

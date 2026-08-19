@@ -40,6 +40,19 @@ model CollectionJobConfig {
   @@map("collection_job_config")
 }
 
+model OperationAccount {
+  id          String   @id
+  key         String   @unique
+  name        String
+  description String?
+  enabled     Boolean  @default(true)
+  fields      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("operation_account")
+}
+
 model SourceFetchRun {
   id          String    @id
   platform    String

@@ -22,6 +22,7 @@ export class XTrendContextBuilder {
       sourceType: input.sourceType,
       regions: input.regions,
     });
+    const platformConfig = await this.collectionRepository.findPlatformConfig(input.platform);
     const latestSnapshotIds = latestSnapshots.map((snapshot) => snapshot.id);
     const successfulRegions = await Promise.all(
       latestSnapshots.map((snapshot) => this.toRegionSnapshotContext(snapshot)),
@@ -57,7 +58,16 @@ export class XTrendContextBuilder {
       snapshotDiffs: await this.collectionRepository.findSourceSnapshotDiffs({
         currentSnapshotIds: latestSnapshotIds,
       }),
-      configuredTopics: [],
+      configuredTopics: (platformConfig?.variables.topicConfigs ?? [])
+        .filter((topic) => topic.enabled)
+        .map((topic) => ({
+          id: topic.id,
+          name: topic.name,
+          semanticKeywords: topic.keywords,
+          positiveExamples: topic.positiveExamples,
+          negativeExamples: topic.negativeExamples,
+          enabled: topic.enabled,
+        })),
       eventCandidates: [],
       recentEventHistory: [],
     };
