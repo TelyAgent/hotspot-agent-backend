@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commands"],
+  "properties": {
+    "commands": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "reason", "dedupeKey", "candidate", "evidenceRecords"],
+            "properties": {
+              "type": { "type": "string", "const": "upsert_future_event" },
+              "idempotencyKey": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 },
+              "dedupeKey": { "type": "string", "minLength": 1 },
+              "candidate": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "subject",
+                  "eventType",
+                  "factTime",
+                  "factEndTime",
+                  "timezone",
+                  "schedulePrecision",
+                  "confirmationLevel",
+                  "expressionBoundary",
+                  "confirmedFacts",
+                  "unconfirmedFacts"
+                ],
+                "properties": {
+                  "title": { "type": "string", "minLength": 1 },
+                  "subject": { "type": "string" },
+                  "eventType": { "type": "string", "minLength": 1 },
+                  "factTime": { "type": ["string", "null"] },
+                  "factEndTime": { "type": ["string", "null"] },
+                  "timezone": { "type": "string", "minLength": 1 },
+                  "schedulePrecision": {
+                    "type": "string",
+                    "enum": ["exact_time", "date", "date_range", "season_cycle", "unknown"]
+                  },
+                  "confirmationLevel": {
+                    "type": "string",
+                    "enum": ["fixed", "confirmed", "expected", "needs_verification", "changed", "cancelled"]
+                  },
+                  "expressionBoundary": {
+                    "type": "string",
+                    "enum": ["factual", "qualified", "internal_only", "blocked"]
+                  },
+                  "confirmedFacts": { "type": "array", "items": { "type": "string" } },
+                  "unconfirmedFacts": { "type": "array", "items": { "type": "string" } }
+                }
+              },
+              "evidenceRecords": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["sourceType", "sourceItemId", "url", "verifiedAt", "claims"],
+                  "properties": {
+                    "sourceType": { "type": "string" },
+                    "sourceItemId": { "type": "string" },
+                    "url": { "type": "string" },
+                    "verifiedAt": { "type": "string" },
+                    "claims": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "sourceItemId", "reason"],
+            "properties": {
+              "type": { "type": "string", "const": "ignore_future_candidate" },
+              "idempotencyKey": { "type": "string", "minLength": 1 },
+              "sourceItemId": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

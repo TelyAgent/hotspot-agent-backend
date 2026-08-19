@@ -28,6 +28,12 @@ export interface CollectionRepository {
     patch: Partial<Pick<CollectionJobConfig, 'enabled' | 'schedule' | 'inputTemplate' | 'variableRefs' | 'outputTarget'>>,
   ): MaybePromise<CollectionJobConfig>;
   listJobConfigs(platform: string): MaybePromise<CollectionJobConfig[]>;
+  findLatestFetchRun(input: {
+    platform: string;
+    toolName: string;
+    sourceType: string;
+    status?: SourceFetchRun['status'];
+  }): MaybePromise<SourceFetchRun | undefined>;
   saveFetchRun(fetchRun: SourceFetchRun): MaybePromise<SourceFetchRun>;
   updateFetchRun(id: string, patch: Partial<SourceFetchRun>): MaybePromise<SourceFetchRun>;
   saveXTrendSnapshot(snapshot: XTrendSnapshot): MaybePromise<XTrendSnapshot>;

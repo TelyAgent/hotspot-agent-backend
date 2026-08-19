@@ -296,6 +296,7 @@ model Event {
   intakes        EventIntake[]
   sourceContexts EventSourceContext[]
   evidence       EventEvidence[]
+  futureLinks    FutureEventResponseLink[]
 
   @@index([status, formedAt])
   @@map("event")
@@ -367,4 +368,214 @@ model IgnoredSignal {
 
   @@index([workflowRunId])
   @@map("ignored_signal")
+}
+
+model FutureSourceConfig {
+  id          String   @id
+  sourceType  String   @unique
+  displayName String
+  connectorId String
+  enabled     Boolean  @default(true)
+  schedule    Json
+  variables   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  runs FutureSourceRun[]
+
+  @@map("future_source_config")
+}
+
+model FutureSourceRun {
+  id             String    @id
+  sourceConfigId String?
+  sourceType     String
+  status         String
+  startedAt      DateTime
+  finishedAt     DateTime?
+  itemCount      Int       @default(0)
+  error          String?
+  input          Json
+  rawSummary     Json?
+
+  sourceConfig FutureSourceConfig? @relation(fields: [sourceConfigId], references: [id], onDelete: SetNull)
+  items        FutureSourceItem[]
+
+  @@index([sourceType, startedAt])
+  @@map("future_source_run")
+}
+
+model FutureSourceItem {
+  id            String   @id
+  sourceRunId   String
+  sourceType    String
+  sourceItemId  String
+  sourceUrl     String
+  retrievedAt   DateTime
+  title         String
+  description   String?
+  startTime     DateTime?
+  endTime       DateTime?
+  timezone      String
+  raw           Json
+  createdAt     DateTime @default(now())
+
+  sourceRun FutureSourceRun       @relation(fields: [sourceRunId], references: [id], onDelete: Cascade)
+  evidence  FutureEventEvidence[]
+
+  @@unique([sourceType, sourceItemId])
+  @@index([sourceRunId])
+  @@map("future_source_item")
+}
+
+model FutureEvent {
+  id                 String    @id
+  title              String
+  subject            String
+  eventType          String
+  dedupeKey          String    @unique
+  factTime           DateTime?
+  factEndTime        DateTime?
+  timezone           String
+  schedulePrecision  String
+  confirmationLevel  String
+  expressionBoundary String
+  status             String
+  relatedEventId     String?
+  entryMode          String?
+  currentScore       Int       @default(0)
+  currentScoreBand   String
+  ruleVersion        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  evidence      FutureEventEvidence[]
+  windows       FutureEventWindow[]
+  heatQueries   FutureEventHeatQuery[]
+  heatBuckets   FutureEventHeatBucket[]
+  scoreVersions FutureEventScoreVersion[]
+  responseCards FutureResponseCard[]
+  responseLinks FutureEventResponseLink[]
+
+  @@index([factTime])
+  @@index([status, factTime])
+  @@map("future_event")
+}
+
+model FutureEventEvidence {
+  id             String   @id
+  futureEventId  String
+  sourceItemId   String?
+  sourceType     String
+  url            String
+  verifiedAt     DateTime
+  claims         Json
+  raw            Json?
+  createdAt      DateTime @default(now())
+
+  futureEvent FutureEvent       @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+  sourceItem  FutureSourceItem? @relation(fields: [sourceItemId], references: [id], onDelete: SetNull)
+
+  @@index([futureEventId])
+  @@index([sourceType])
+  @@map("future_event_evidence")
+}
+
+model FutureEventWindow {
+  id            String    @id
+  futureEventId String
+  windowType    String
+  startAt       DateTime?
+  endAt         DateTime?
+  source        String
+  version       String
+  createdAt     DateTime  @default(now())
+
+  futureEvent FutureEvent @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+
+  @@index([futureEventId, windowType])
+  @@map("future_event_window")
+}
+
+model FutureEventHeatQuery {
+  id            String   @id
+  futureEventId String
+  query         String
+  version       String
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  futureEvent FutureEvent @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+
+  @@index([futureEventId, active])
+  @@map("future_event_heat_query")
+}
+
+model FutureEventHeatBucket {
+  id            String   @id
+  futureEventId String
+  queryVersion  String
+  startAt       DateTime
+  endAt         DateTime
+  postCount     Int
+  sourceType    String
+  createdAt     DateTime @default(now())
+
+  futureEvent FutureEvent @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+
+  @@unique([futureEventId, queryVersion, startAt, endAt])
+  @@index([futureEventId, startAt])
+  @@map("future_event_heat_bucket")
+}
+
+model FutureEventScoreVersion {
+  id               String   @id
+  futureEventId    String
+  total            Int
+  impact           Json
+  evidence         Int
+  heatMomentum     Int
+  timeUrgency      Int
+  contentReadiness Int
+  band             String
+  reasons          Json
+  workflowRunId    String?
+  version          String
+  createdAt        DateTime @default(now())
+
+  futureEvent FutureEvent @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+
+  @@index([futureEventId, createdAt])
+  @@map("future_event_score_version")
+}
+
+model FutureResponseCard {
+  id              String   @id
+  futureEventId   String
+  status          String
+  scoreAtCreation Int
+  reason          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  futureEvent FutureEvent @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+
+  @@index([futureEventId, status])
+  @@map("future_response_card")
+}
+
+model FutureEventResponseLink {
+  id            String   @id
+  futureEventId String
+  eventId       String
+  entryMode     String
+  createdBy     String
+  createdAt     DateTime @default(now())
+
+  futureEvent FutureEvent @relation(fields: [futureEventId], references: [id], onDelete: Cascade)
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([futureEventId, entryMode])
+  @@index([eventId])
+  @@map("future_event_response_link")
 }

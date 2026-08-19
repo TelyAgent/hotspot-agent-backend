@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commands"],
+  "properties": {
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "idempotencyKey", "futureEventId", "reason", "windows", "score"],
+        "properties": {
+          "type": { "type": "string", "const": "update_future_event_windows_score" },
+          "idempotencyKey": { "type": "string", "minLength": 1 },
+          "futureEventId": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "windows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["windowType", "startAt", "endAt", "source", "version"],
+              "properties": {
+                "windowType": { "type": "string", "enum": ["monitoring", "preheat", "live", "followUp"] },
+                "startAt": { "type": ["string", "null"] },
+                "endAt": { "type": ["string", "null"] },
+                "source": { "type": "string" },
+                "version": { "type": "string" }
+              }
+            }
+          },
+          "score": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["total", "impact", "evidence", "heatMomentum", "timeUrgency", "contentReadiness", "band", "reasons", "version"],
+            "properties": {
+              "total": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "impact": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["scope", "relevance", "outcomeImportance"],
+                "properties": {
+                  "scope": { "type": "integer", "minimum": 0, "maximum": 10 },
+                  "relevance": { "type": "integer", "minimum": 0, "maximum": 10 },
+                  "outcomeImportance": { "type": "integer", "minimum": 0, "maximum": 10 }
+                }
+              },
+              "evidence": { "type": "integer", "minimum": 0, "maximum": 20 },
+              "heatMomentum": { "type": "integer", "minimum": 0, "maximum": 30 },
+              "timeUrgency": { "type": "integer", "minimum": 0, "maximum": 10 },
+              "contentReadiness": { "type": "integer", "minimum": 0, "maximum": 10 },
+              "band": { "type": "string", "enum": ["observe", "reserve", "planning", "worth_response", "auto_response"] },
+              "reasons": { "type": "array", "items": { "type": "string" } },
+              "version": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commands"],
+  "properties": {
+    "commands": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "futureEventId", "reason", "scoreAtCreation"],
+            "properties": {
+              "type": { "type": "string", "const": "create_pending_response" },
+              "idempotencyKey": { "type": "string", "minLength": 1 },
+              "futureEventId": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 },
+              "scoreAtCreation": { "type": "integer", "minimum": 0, "maximum": 100 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "futureEventId", "entryMode", "reason", "startResponsePipeline"],
+            "properties": {
+              "type": { "type": "string", "const": "create_event_intake" },
+              "idempotencyKey": { "type": "string", "minLength": 1 },
+              "futureEventId": { "type": "string", "minLength": 1 },
+              "entryMode": { "type": "string", "enum": ["scheduled_manual_response", "scheduled_auto_response"] },
+              "reason": { "type": "string", "minLength": 1 },
+              "startResponsePipeline": { "type": "boolean" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "futureEventId", "eventId", "reason"],
+            "properties": {
+              "type": { "type": "string", "const": "update_event_context" },
+              "idempotencyKey": { "type": "string", "minLength": 1 },
+              "futureEventId": { "type": "string", "minLength": 1 },
+              "eventId": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "futureEventId", "reason"],
+            "properties": {
+              "type": { "type": "string", "const": "ignore_future_event_signal" },
+              "idempotencyKey": { "type": "string", "minLength": 1 },
+              "futureEventId": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

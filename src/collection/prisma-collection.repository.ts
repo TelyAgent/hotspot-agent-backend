@@ -182,6 +182,24 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
     return this.jobConfigs.filter((config) => config.platform === platform);
   }
 
+  async findLatestFetchRun(input: {
+    platform: string;
+    toolName: string;
+    sourceType: string;
+    status?: SourceFetchRun['status'];
+  }) {
+    const run = await this.prisma.sourceFetchRun.findFirst({
+      where: {
+        platform: input.platform,
+        toolName: input.toolName,
+        sourceType: input.sourceType,
+        status: input.status,
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+    return run ? mapFetchRun(run) : undefined;
+  }
+
   saveFetchRun(fetchRun: SourceFetchRun) {
     return this.prisma.sourceFetchRun
       .create({

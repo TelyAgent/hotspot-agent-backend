@@ -74,6 +74,23 @@ export class InMemoryCollectionRepository implements CollectionRepository {
     return this.jobConfigs.filter((config) => config.platform === platform);
   }
 
+  findLatestFetchRun(input: {
+    platform: string;
+    toolName: string;
+    sourceType: string;
+    status?: SourceFetchRun['status'];
+  }): SourceFetchRun | undefined {
+    return [...this.fetchRuns]
+      .filter(
+        (run) =>
+          run.platform === input.platform &&
+          run.toolName === input.toolName &&
+          run.sourceType === input.sourceType &&
+          (!input.status || run.status === input.status),
+      )
+      .sort((left, right) => right.startedAt.localeCompare(left.startedAt))[0];
+  }
+
   saveFetchRun(fetchRun: SourceFetchRun): SourceFetchRun {
     this.fetchRuns.push(fetchRun);
     return fetchRun;

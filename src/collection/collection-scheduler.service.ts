@@ -1,57 +1,35 @@
-import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { CollectionRepository } from './collection.repository';
 import { COLLECTION_REPOSITORY } from './collection.tokens';
 import { CollectionJobConfig } from './collection.types';
 import { TwitterCollectionService } from './twitter-collection.service';
 
-type TimerHandle = unknown;
-
-interface SchedulerTimers {
-  setInterval(callback: () => void | Promise<void>, milliseconds: number): TimerHandle;
-  clearInterval(handle: TimerHandle): void;
-}
-
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 @Injectable()
-export class CollectionSchedulerService implements OnModuleInit, OnModuleDestroy {
+export class CollectionSchedulerService {
   private readonly logger = new Logger(CollectionSchedulerService.name);
-  private readonly timers: SchedulerTimers;
-  private readonly handles: TimerHandle[] = [];
   private readonly runningJobs = new Set<string>();
 
   constructor(
     @Inject(COLLECTION_REPOSITORY)
     private readonly repository: CollectionRepository,
     private readonly twitterCollection: TwitterCollectionService,
-    @Optional() timers?: SchedulerTimers,
-  ) {
-    this.timers = timers ?? {
-      setInterval: (callback, milliseconds) => setInterval(callback, milliseconds),
-      clearInterval: (handle) => clearInterval(handle as ReturnType<typeof setInterval>),
-    };
-  }
+  ) {}
 
-  async onModuleInit() {
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleCronTick() {
     const jobs = await this.repository.listJobConfigs('x');
     for (const job of jobs.filter((candidate) => candidate.enabled)) {
-      const intervalMs = this.resolveIntervalMs(job);
-      if (!intervalMs) {
+      if (!this.resolveIntervalMs(job)) {
         this.logger.warn(`Collection job ${job.id} has unsupported schedule: ${JSON.stringify(job.schedule)}`);
         continue;
       }
-
-      const handle = this.timers.setInterval(() => this.runJob(job.id), intervalMs);
-      this.handles.push(handle);
-      this.logger.log(`Scheduled collection job ${job.id} every ${intervalMs}ms`);
+      if (await this.isJobDue(job)) {
+        await this.runJob(job.id);
+      }
     }
-  }
-
-  onModuleDestroy() {
-    for (const handle of this.handles) {
-      this.timers.clearInterval(handle);
-    }
-    this.handles.length = 0;
   }
 
   async runJob(jobId: string) {
@@ -96,5 +74,18 @@ export class CollectionSchedulerService implements OnModuleInit, OnModuleDestroy
     }
 
     return undefined;
+  }
+
+  private async isJobDue(job: CollectionJobConfig) {
+    const intervalMs = this.resolveIntervalMs(job);
+    if (!intervalMs) return false;
+    const latest = await this.repository.findLatestFetchRun({
+      platform: job.platform,
+      toolName: job.toolName,
+      sourceType: job.sourceType,
+      status: 'success',
+    });
+    if (!latest) return true;
+    return Date.now() - new Date(latest.startedAt).getTime() >= intervalMs;
   }
 }
