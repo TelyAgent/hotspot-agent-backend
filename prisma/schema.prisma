@@ -205,3 +205,166 @@ model Signal {
   @@index([platform, sourceType, region, observedAt])
   @@map("signal")
 }
+
+model WorkflowDefinition {
+  id               String   @id
+  workflowId       String
+  name             String
+  type             String
+  version          String
+  status           String
+  markdownPath     String
+  outputSchemaPath String
+  checksum         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  runs WorkflowRun[]
+
+  @@unique([workflowId, version])
+  @@index([type, status])
+  @@map("workflow_definition")
+}
+
+model WorkflowRun {
+  id                   String    @id
+  workflowDefinitionId String
+  status               String
+  startedAt            DateTime
+  finishedAt           DateTime?
+  model                String?
+  input                Json
+  output               Json?
+  error                String?
+
+  definition          WorkflowDefinition          @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+  commands            WorkflowCommand[]
+  commandExecutions   WorkflowCommandExecution[]
+  eventIntakes        EventIntake[]
+  eventSourceContexts EventSourceContext[]
+  eventEvidence       EventEvidence[]
+  ignoredSignals      IgnoredSignal[]
+
+  @@index([workflowDefinitionId, startedAt])
+  @@index([status, startedAt])
+  @@map("workflow_run")
+}
+
+model WorkflowCommand {
+  id             String   @id
+  workflowRunId  String
+  type           String
+  idempotencyKey String   @unique
+  payload        Json
+  createdAt      DateTime @default(now())
+
+  run        WorkflowRun                @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+  executions WorkflowCommandExecution[]
+
+  @@index([workflowRunId])
+  @@map("workflow_command")
+}
+
+model WorkflowCommandExecution {
+  id                String   @id
+  workflowCommandId String
+  workflowRunId     String
+  commandType        String
+  idempotencyKey     String
+  status             String
+  targetEventId      String?
+  error              String?
+  createdAt          DateTime @default(now())
+
+  command WorkflowCommand @relation(fields: [workflowCommandId], references: [id], onDelete: Cascade)
+  run     WorkflowRun     @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([workflowRunId])
+  @@index([idempotencyKey])
+  @@map("workflow_command_execution")
+}
+
+model Event {
+  id                 String   @id
+  title              String
+  normalizedEventKey String   @unique
+  status             String
+  confidence         String
+  formedAt           DateTime
+  updatedAt          DateTime @updatedAt
+
+  intakes        EventIntake[]
+  sourceContexts EventSourceContext[]
+  evidence       EventEvidence[]
+
+  @@index([status, formedAt])
+  @@map("event")
+}
+
+model EventIntake {
+  id                 String   @id
+  eventId            String?
+  workflowRunId      String
+  entryMode          String
+  observedAt         DateTime
+  t0                 DateTime?
+  title              String
+  oneLineSummary     String
+  confirmationLevel  String
+  expressionBoundary String
+  payload            Json
+  dedupeKey          String
+  createdAt          DateTime @default(now())
+
+  event Event?      @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  run   WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([workflowRunId])
+  @@index([dedupeKey])
+  @@map("event_intake")
+}
+
+model EventSourceContext {
+  id            String   @id
+  eventId       String
+  workflowRunId String
+  sourceType    String
+  payload       Json
+  createdAt     DateTime @default(now())
+
+  event Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  run   WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, sourceType])
+  @@map("event_source_context")
+}
+
+model EventEvidence {
+  id            String   @id
+  eventId       String
+  workflowRunId String
+  sourceType    String
+  url           String?
+  claim         String
+  payload       Json
+  createdAt     DateTime @default(now())
+
+  event Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  run   WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, sourceType])
+  @@map("event_evidence")
+}
+
+model IgnoredSignal {
+  id            String   @id
+  workflowRunId String
+  reason        String
+  sourceRefs    Json
+  createdAt     DateTime @default(now())
+
+  run WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([workflowRunId])
+  @@map("ignored_signal")
+}

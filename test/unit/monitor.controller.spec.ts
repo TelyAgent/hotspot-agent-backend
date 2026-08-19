@@ -57,4 +57,30 @@ describe('MonitorController', () => {
       }),
     ]);
   });
+
+  it('returns failed refresh status with error details instead of throwing', async () => {
+    const repository = new InMemoryCollectionRepository(createDefaultCollectionState());
+    const twitterCollection = {
+      runTrendingJob: jest.fn().mockResolvedValue({
+        fetchRun: {
+          id: 'run_failed',
+          status: 'failed',
+          itemCount: 0,
+          error: 'twitterapi.io x.getTrending failed for all regions: global: 402 Payment Required',
+        },
+        toolInput: {},
+        snapshots: [],
+        signals: [],
+      }),
+    };
+    const controller = new MonitorController(repository, twitterCollection as any);
+
+    await expect(controller.refresh()).resolves.toEqual({
+      status: 'failed',
+      message: '采集失败',
+      fetchRunId: 'run_failed',
+      itemCount: 0,
+      error: 'twitterapi.io x.getTrending failed for all regions: global: 402 Payment Required',
+    });
+  });
 });

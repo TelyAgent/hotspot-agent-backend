@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional, forwardRef } from '@nestjs/common';
 import { ToolRegistry } from '../connectors/tool-registry';
+import { WorkflowRunner } from '../workflow/workflow-runner';
 import { CollectionRepository } from './collection.repository';
 import { COLLECTION_REPOSITORY } from './collection.tokens';
 import { CollectionVariableResolver } from './collection-variable-resolver';
@@ -29,16 +30,26 @@ export interface RunTrendingJobResult {
   toolInput: Record<string, unknown>;
   snapshots: SourceSnapshot[];
   signals: Signal[];
+  workflowRun?: {
+    id: string;
+    status: string;
+    commandCount: number;
+    executionCount: number;
+  };
 }
 
 @Injectable()
 export class TwitterCollectionService {
+  private readonly logger = new Logger(TwitterCollectionService.name);
   private readonly variables = new CollectionVariableResolver();
 
   constructor(
     @Inject(COLLECTION_REPOSITORY)
     private readonly repository: CollectionRepository,
     private readonly tools: ToolRegistry,
+    @Optional()
+    @Inject(forwardRef(() => WorkflowRunner))
+    private readonly workflowRunner?: Pick<WorkflowRunner, 'runXTrendEventFormation'>,
   ) {}
 
   async runTrendingJob(input: RunTrendingJobInput): Promise<RunTrendingJobResult> {
@@ -60,10 +71,11 @@ export class TwitterCollectionService {
       itemCount: 0,
     });
 
-    const toolOutput = await this.tools.invoke<XTrendingToolOutput[]>(input.jobConfig.toolName, {
-      ...toolInput,
-      now: input.now,
-    });
+    const toolResult = await this.invokeTrendingTool(input, fetchRun.id, toolInput);
+    if (toolResult.status === 'failed') {
+      return { fetchRun: toolResult.fetchRun, toolInput, snapshots: [], signals: [] };
+    }
+    const toolOutput = toolResult.output;
     const snapshots: SourceSnapshot[] = [];
     const signals: Signal[] = [];
     let itemCount = 0;
@@ -81,7 +93,59 @@ export class TwitterCollectionService {
       itemCount,
     });
 
-    return { fetchRun: finished, toolInput, snapshots, signals };
+    const workflowRun = await this.triggerEventFormationWorkflow(input.now, snapshots);
+
+    return { fetchRun: finished, toolInput, snapshots, signals, workflowRun };
+  }
+
+  private async invokeTrendingTool(
+    input: RunTrendingJobInput,
+    fetchRunId: string,
+    toolInput: Record<string, unknown>,
+  ): Promise<
+    | { status: 'success'; output: XTrendingToolOutput[] }
+    | { status: 'failed'; fetchRun: SourceFetchRun }
+  > {
+    try {
+      const output = await this.tools.invoke<XTrendingToolOutput[]>(input.jobConfig.toolName, {
+        ...toolInput,
+        now: input.now,
+      });
+      return { status: 'success', output };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const failed = await this.repository.updateFetchRun(fetchRunId, {
+        status: 'failed',
+        finishedAt: input.now,
+        itemCount: 0,
+        error: message,
+      });
+      return { status: 'failed', fetchRun: failed };
+    }
+  }
+
+  private async triggerEventFormationWorkflow(observedAt: string, snapshots: SourceSnapshot[]) {
+    if (!this.workflowRunner || snapshots.length === 0) {
+      return undefined;
+    }
+
+    try {
+      const result = await this.workflowRunner.runXTrendEventFormation({
+        observedAt,
+        regions: snapshots.map((snapshot) => snapshot.region),
+      });
+      return {
+        id: result.run.id,
+        status: result.run.status,
+        commandCount: result.commands.length,
+        executionCount: result.executions.length,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `X trend event workflow trigger failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return undefined;
+    }
   }
 
   private async saveTrendingRegion(fetchRunId: string, output: XTrendingToolOutput) {

@@ -1,16 +1,18 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ToolRegistry } from '../connectors/tool-registry';
 import { createMockTwitterTools } from '../connectors/x/mock-twitter.tools';
 import { createTwitterApiIoTools } from '../connectors/x/twitterapi-io.tools';
 import { CollectionController } from './collection.controller';
+import { CollectionSchedulerService } from './collection-scheduler.service';
 import { COLLECTION_REPOSITORY } from './collection.tokens';
 import { PrismaCollectionRepository } from './prisma-collection.repository';
 import { TwitterCollectionService } from './twitter-collection.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MonitorController } from '../monitor/monitor.controller';
+import { WorkflowModule } from '../workflow/workflow.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, forwardRef(() => WorkflowModule)],
   controllers: [CollectionController, MonitorController],
   providers: [
     PrismaCollectionRepository,
@@ -30,6 +32,7 @@ import { MonitorController } from '../monitor/monitor.controller';
       },
     },
     TwitterCollectionService,
+    CollectionSchedulerService,
   ],
   exports: [COLLECTION_REPOSITORY, TwitterCollectionService],
 })

@@ -46,6 +46,10 @@ const DEFAULT_BASE_URL = 'https://api.twitterapi.io';
 
 const DEFAULT_REGION_WOEIDS: Record<string, number> = {
   global: 1,
+  'United States': 23424977,
+  'United Kingdom': 23424975,
+  Japan: 23424856,
+  Korea: 23424868,
 };
 
 export function createTwitterApiIoTools(options: TwitterApiIoToolOptions = {}): RuntimeTool[] {
@@ -70,7 +74,7 @@ export function createTwitterApiIoTools(options: TwitterApiIoToolOptions = {}): 
         }
 
         const data = input as GetTrendingInput;
-        const regions = data.regions?.length ? data.regions : ['global'];
+        const regions = data.regions?.length ? data.regions : Object.keys(DEFAULT_REGION_WOEIDS);
         const regionWoeids = {
           ...defaultRegionWoeids,
           ...data.regionWoeids,
@@ -79,57 +83,98 @@ export function createTwitterApiIoTools(options: TwitterApiIoToolOptions = {}): 
         const requestCount = Math.max(30, data.count ?? data.limit ?? 30);
         const outputLimit = data.limit ?? requestCount;
 
-        return Promise.all(
-          regions.map(async (region, index) => {
-            const woeid = data.woeids?.[index] ?? regionWoeids[region];
-            if (!woeid) {
-              throw new Error(`No WOEID configured for X trend region: ${region}`);
-            }
-
-            const url = `${baseUrl}/twitter/trends?woeid=${woeid}&count=${requestCount}`;
-            const response = await fetcher(url, {
-              headers: {
-                'X-API-Key': apiKey,
-              },
-            });
-            if (!response.ok) {
-              throw new Error(
-                `twitterapi.io x.getTrending failed for ${region}: ${response.status ?? ''} ${
-                  response.statusText ?? ''
-                }`.trim(),
-              );
-            }
-
-            const body = (await response.json()) as TwitterApiIoTrendResponse;
-            if (body.status === 'error') {
-              throw new Error(`twitterapi.io x.getTrending failed for ${region}: ${body.msg ?? 'unknown error'}`);
-            }
-
-            const trends = Array.isArray(body.trends) ? body.trends : [];
-            return {
-              platform: 'x',
-              sourceType: 'trend',
+        const results = await Promise.allSettled(
+          regions.map((region, index) =>
+            fetchRegionTrends({
               region,
+              woeid: data.woeids?.[index] ?? regionWoeids[region],
+              baseUrl,
+              requestCount,
+              outputLimit,
               collectedAt,
-              items: trends.slice(0, outputLimit).map((item, itemIndex) => {
-                const trend = item.trend ?? item;
-                const name = trend.name ?? trend.target?.query ?? `trend-${itemIndex + 1}`;
-                const query = trend.target?.query ?? name;
+              apiKey,
+              fetcher,
+            }),
+          ),
+        );
+        const successful = results
+          .filter((result): result is PromiseFulfilledResult<XTrendingToolOutput> => result.status === 'fulfilled')
+          .map((result) => result.value);
+        if (successful.length > 0) {
+          return successful;
+        }
 
-                return {
-                  rank: trend.rank ?? itemIndex + 1,
-                  name,
-                  query,
-                  url: `https://x.com/search?q=${encodeURIComponent(query)}`,
-                  category: trend.meta_description,
-                  raw: item,
-                };
-              }),
-              raw: body,
-            };
-          }),
+        throw new Error(
+          `twitterapi.io x.getTrending failed for all regions: ${results
+            .map((result, index) => formatRegionalFailure(regions[index], result))
+            .join('; ')}`,
         );
       },
     },
   ];
+}
+
+async function fetchRegionTrends(input: {
+  region: string;
+  woeid?: number;
+  baseUrl: string;
+  requestCount: number;
+  outputLimit: number;
+  collectedAt: string;
+  apiKey: string;
+  fetcher: Fetcher;
+}): Promise<XTrendingToolOutput> {
+  if (!input.woeid) {
+    throw new Error(`No WOEID configured`);
+  }
+
+  const url = `${input.baseUrl}/twitter/trends?woeid=${input.woeid}&count=${input.requestCount}`;
+  const response = await input.fetcher(url, {
+    headers: {
+      'X-API-Key': input.apiKey,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`${response.status ?? ''} ${response.statusText ?? ''}`.trim());
+  }
+
+  const body = (await response.json()) as TwitterApiIoTrendResponse;
+  if (body.status === 'error') {
+    throw new Error(body.msg ?? 'unknown error');
+  }
+
+  const trends = Array.isArray(body.trends) ? body.trends : [];
+  return {
+    platform: 'x',
+    sourceType: 'trend',
+    region: input.region,
+    collectedAt: input.collectedAt,
+    items: trends.slice(0, input.outputLimit).map((item, itemIndex) => {
+      const trend = item.trend ?? item;
+      const name = trend.name ?? trend.target?.query ?? `trend-${itemIndex + 1}`;
+      const query = trend.target?.query ?? name;
+
+      return {
+        rank: trend.rank ?? itemIndex + 1,
+        name,
+        query,
+        url: `https://x.com/search?q=${encodeURIComponent(query)}`,
+        category: trend.meta_description,
+        raw: item,
+      };
+    }),
+    raw: body,
+  };
+}
+
+function formatRegionalFailure(
+  region: string,
+  result: PromiseSettledResult<XTrendingToolOutput>,
+) {
+  if (result.status === 'fulfilled') {
+    return `${region}: success`;
+  }
+
+  const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+  return `${region}: ${reason}`;
 }

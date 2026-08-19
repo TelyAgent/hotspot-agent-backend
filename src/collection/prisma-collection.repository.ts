@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { createDefaultCollectionState } from './default-collection-state';
+import { createDefaultCollectionState, mergePlatformCollectionConfigDefaults } from './default-collection-state';
 import { CollectionRepository } from './collection.repository';
 import {
   CollectionJobConfig,
@@ -28,9 +28,31 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
 
   async seedDefaults(state: CollectionState) {
     for (const config of state.platformConfigs) {
+      const existing = await this.prisma.platformCollectionConfig.findUnique({
+        where: { platform: config.platform },
+      });
+      const merged = existing
+        ? mergePlatformCollectionConfigDefaults(
+            {
+              id: existing.id,
+              platform: existing.platform as PlatformCollectionConfig['platform'],
+              connectorId: existing.connectorId,
+              displayName: existing.displayName,
+              enabled: existing.enabled,
+              defaultTimezone: existing.defaultTimezone,
+              defaultRegions: existing.defaultRegions as string[],
+              rateLimit: existing.rateLimit as PlatformCollectionConfig['rateLimit'],
+              variables: existing.variables as PlatformCollectionConfig['variables'],
+            },
+            config,
+          )
+        : config;
       await this.prisma.platformCollectionConfig.upsert({
         where: { platform: config.platform },
-        update: {},
+        update: {
+          defaultRegions: merged.defaultRegions as any,
+          variables: merged.variables as any,
+        },
         create: {
           id: config.id,
           platform: config.platform,
@@ -285,6 +307,42 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
       : undefined;
   }
 
+  async findLatestSourceSnapshots(input: {
+    platform: string;
+    sourceType: string;
+    regions: string[];
+  }) {
+    if (input.regions.length === 0) {
+      return [];
+    }
+
+    const snapshots = await this.prisma.sourceSnapshot.findMany({
+      where: {
+        platform: input.platform,
+        sourceType: input.sourceType,
+        region: { in: input.regions },
+      },
+      orderBy: [{ region: 'asc' }, { collectedAt: 'desc' }],
+    });
+
+    const latestByRegion = new Map<string, SourceSnapshot>();
+    for (const snapshot of snapshots) {
+      if (!latestByRegion.has(snapshot.region)) {
+        latestByRegion.set(snapshot.region, {
+          ...snapshot,
+          platform: snapshot.platform as SourceSnapshot['platform'],
+          sourceType: snapshot.sourceType as SourceSnapshot['sourceType'],
+          collectedAt: snapshot.collectedAt.toISOString(),
+        });
+      }
+    }
+
+    return input.regions.flatMap((region) => {
+      const snapshot = latestByRegion.get(region);
+      return snapshot ? [snapshot] : [];
+    });
+  }
+
   async findSourceSnapshotItems(sourceSnapshotId: string) {
     const items = await this.prisma.sourceSnapshotItem.findMany({
       where: { sourceSnapshotId },
@@ -322,6 +380,28 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
         rankDown: saved.rankDown as unknown as SourceSnapshotDiff['rankDown'],
         unchanged: saved.unchanged as unknown as SourceSnapshotDiff['unchanged'],
       }));
+  }
+
+  async findSourceSnapshotDiffs(input: { currentSnapshotIds: string[] }) {
+    if (input.currentSnapshotIds.length === 0) {
+      return [];
+    }
+
+    const diffs = await this.prisma.sourceSnapshotDiff.findMany({
+      where: { currentSnapshotId: { in: input.currentSnapshotIds } },
+    });
+    return diffs.map((diff) => ({
+      id: diff.id,
+      platform: diff.platform as SourceSnapshotDiff['platform'],
+      region: diff.region,
+      currentSnapshotId: diff.currentSnapshotId,
+      previousSnapshotId: diff.previousSnapshotId ?? undefined,
+      entered: diff.entered as unknown as SourceSnapshotDiff['entered'],
+      exited: diff.exited as unknown as SourceSnapshotDiff['exited'],
+      rankUp: diff.rankUp as unknown as SourceSnapshotDiff['rankUp'],
+      rankDown: diff.rankDown as unknown as SourceSnapshotDiff['rankDown'],
+      unchanged: diff.unchanged as unknown as SourceSnapshotDiff['unchanged'],
+    }));
   }
 
   saveSignals(signals: Signal[]) {

@@ -41,7 +41,13 @@ export interface CollectionRepository {
     sourceType: string;
     region: string;
   }): MaybePromise<SourceSnapshot | undefined>;
+  findLatestSourceSnapshots(input: {
+    platform: string;
+    sourceType: string;
+    regions: string[];
+  }): MaybePromise<SourceSnapshot[]>;
   findSourceSnapshotItems(sourceSnapshotId: string): MaybePromise<SourceSnapshotItem[]>;
   saveSourceSnapshotDiff(diff: SourceSnapshotDiff): MaybePromise<SourceSnapshotDiff>;
+  findSourceSnapshotDiffs(input: { currentSnapshotIds: string[] }): MaybePromise<SourceSnapshotDiff[]>;
   saveSignals(signals: Signal[]): MaybePromise<Signal[]>;
 }

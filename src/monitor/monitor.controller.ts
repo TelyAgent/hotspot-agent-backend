@@ -76,9 +76,11 @@ export class MonitorController {
 
     return {
       status: result.fetchRun.status,
-      message: `已采集 ${result.fetchRun.itemCount} 条热搜排行榜数据`,
+      message: result.fetchRun.status === 'failed' ? '采集失败' : `已采集 ${result.fetchRun.itemCount} 条热搜排行榜数据`,
       fetchRunId: result.fetchRun.id,
       itemCount: result.fetchRun.itemCount,
+      error: result.fetchRun.error,
+      workflowRun: result.workflowRun,
     };
   }
 

@@ -1,4 +1,4 @@
-import { CollectionState } from './collection.types';
+import { CollectionState, PlatformCollectionConfig } from './collection.types';
 
 export function createDefaultCollectionState(): CollectionState {
   return {
@@ -10,11 +10,15 @@ export function createDefaultCollectionState(): CollectionState {
         displayName: 'X / twitterapi.io',
         enabled: true,
         defaultTimezone: 'Asia/Shanghai',
-        defaultRegions: ['global'],
+        defaultRegions: ['global', 'United States', 'United Kingdom', 'Japan', 'Korea'],
         variables: {
-          regions: ['global'],
+          regions: ['global', 'United States', 'United Kingdom', 'Japan', 'Korea'],
           regionWoeids: {
             global: 1,
+            'United States': 23424977,
+            'United Kingdom': 23424975,
+            Japan: 23424856,
+            Korea: 23424868,
           },
           monitoredAccounts: ['tier10k', 'WatcherGuru', 'lookonchain'],
           topicKeywords: ['OpenAI', 'Bitcoin'],
@@ -52,4 +56,30 @@ export function createDefaultCollectionState(): CollectionState {
       },
     ],
   };
+}
+
+export function mergePlatformCollectionConfigDefaults(
+  existing: PlatformCollectionConfig,
+  defaults: PlatformCollectionConfig,
+): PlatformCollectionConfig {
+  const defaultRegions = mergeUnique(existing.defaultRegions, defaults.defaultRegions);
+  const variableRegions = mergeUnique(existing.variables.regions ?? [], defaults.variables.regions ?? []);
+
+  return {
+    ...existing,
+    defaultRegions,
+    variables: {
+      ...defaults.variables,
+      ...existing.variables,
+      regions: variableRegions,
+      regionWoeids: {
+        ...(defaults.variables.regionWoeids ?? {}),
+        ...(existing.variables.regionWoeids ?? {}),
+      },
+    },
+  };
+}
+
+function mergeUnique(left: string[], right: string[]) {
+  return Array.from(new Set([...left, ...right]));
 }

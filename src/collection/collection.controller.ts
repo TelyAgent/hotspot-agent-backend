@@ -64,6 +64,8 @@ export class CollectionController {
       fetchRunId: result.fetchRun.id,
       status: result.fetchRun.status,
       itemCount: result.fetchRun.itemCount,
+      error: result.fetchRun.error,
+      workflowRun: result.workflowRun,
     };
   }
 }

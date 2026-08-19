@@ -27,4 +27,26 @@ describe('CollectionController', () => {
     expect(repository.xTrendSnapshots).toHaveLength(1);
     expect(repository.signals).toHaveLength(1);
   });
+
+  it('returns collection job error details when the run fails', async () => {
+    const repository = new InMemoryCollectionRepository(createDefaultCollectionState());
+    const service = {
+      runTrendingJob: jest.fn().mockResolvedValue({
+        fetchRun: {
+          id: 'run_failed',
+          status: 'failed',
+          itemCount: 0,
+          error: 'twitterapi.io x.getTrending failed for all regions: global: 402 Payment Required',
+        },
+      }),
+    };
+    const controller = new CollectionController(repository, service as any);
+
+    await expect(controller.runJob('x-trending-default', {})).resolves.toEqual({
+      fetchRunId: 'run_failed',
+      status: 'failed',
+      itemCount: 0,
+      error: 'twitterapi.io x.getTrending failed for all regions: global: 402 Payment Required',
+    });
+  });
 });

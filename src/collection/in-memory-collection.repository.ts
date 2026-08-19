@@ -128,6 +128,22 @@ export class InMemoryCollectionRepository implements CollectionRepository {
       .sort((left, right) => right.collectedAt.localeCompare(left.collectedAt))[0];
   }
 
+  findLatestSourceSnapshots(input: {
+    platform: string;
+    sourceType: string;
+    regions: string[];
+  }): SourceSnapshot[] {
+    return input.regions
+      .map((region) =>
+        this.findLatestSourceSnapshot({
+          platform: input.platform,
+          sourceType: input.sourceType,
+          region,
+        }),
+      )
+      .filter((snapshot): snapshot is SourceSnapshot => Boolean(snapshot));
+  }
+
   findSourceSnapshotItems(sourceSnapshotId: string): SourceSnapshotItem[] {
     return this.sourceSnapshotItems.filter((item) => item.sourceSnapshotId === sourceSnapshotId);
   }
@@ -135,6 +151,11 @@ export class InMemoryCollectionRepository implements CollectionRepository {
   saveSourceSnapshotDiff(diff: SourceSnapshotDiff): SourceSnapshotDiff {
     this.sourceSnapshotDiffs.push(diff);
     return diff;
+  }
+
+  findSourceSnapshotDiffs(input: { currentSnapshotIds: string[] }): SourceSnapshotDiff[] {
+    const idSet = new Set(input.currentSnapshotIds);
+    return this.sourceSnapshotDiffs.filter((diff) => idSet.has(diff.currentSnapshotId));
   }
 
   saveSignals(signals: Signal[]): Signal[] {

@@ -1,0 +1,12 @@
+{
+  "title": "EventWorkflowCommandsV1",
+  "type": "object",
+  "required": ["schemaVersion", "workflowId", "workflowVersion", "runId", "commands"],
+  "properties": {
+    "schemaVersion": { "const": "event_workflow_commands_v1" },
+    "workflowId": { "type": "string" },
+    "workflowVersion": { "type": "string" },
+    "runId": { "type": "string" },
+    "commands": { "type": "array" }
+  }
+}
