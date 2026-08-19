@@ -68,13 +68,15 @@ export class EventCommandExecutor {
       }));
 
     await this.saveEventIntake(workflowRunId, event.id, command);
-    await this.saveEventSourceContext(workflowRunId, event.id, 'x_trend', command.sourceContext);
+    await this.saveEventSourceContext(workflowRunId, event.id, command.eventIntake.entryMode, command.sourceContext);
     await this.saveEvidenceRecords(workflowRunId, event.id, command.evidenceRecords);
     return event.id;
   }
 
   private async executeUpdateEventContext(workflowRunId: string, command: UpdateEventContextCommand) {
-    await this.saveEventSourceContext(workflowRunId, command.targetEventId, 'x_trend', command.sourceContextPatch);
+    const sourceType =
+      command.evidenceRecords?.some((record) => record.sourceType === 'x_topic_circle') ? 'x_topic_circle' : 'x_trend';
+    await this.saveEventSourceContext(workflowRunId, command.targetEventId, sourceType, command.sourceContextPatch);
     await this.saveEvidenceRecords(workflowRunId, command.targetEventId, command.evidenceRecords ?? []);
     return command.targetEventId;
   }

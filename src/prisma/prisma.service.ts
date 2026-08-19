@@ -48,4 +48,51 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       this.platformCollectionConfig.deleteMany(),
     ]);
   }
+
+  async clearTopicCircleMockData() {
+    await this.$executeRawUnsafe(`
+      CREATE TEMP TABLE IF NOT EXISTS _topic_circle_mock_cleanup_runs AS
+      SELECT DISTINCT "fetchRunId", "accountRunId", "authorHandle"
+      FROM "x_topic_circle_post"
+      WHERE "postId" LIKE 'mock\\_%' ESCAPE '\\'
+    `);
+    await this.$executeRawUnsafe(`
+      DELETE FROM "topic_circle_candidate_post"
+      WHERE "postId" LIKE 'mock\\_%' ESCAPE '\\'
+    `);
+    await this.$executeRawUnsafe(`
+      DELETE FROM "topic_circle_candidate" candidate
+      WHERE candidate."eventId" IS NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM "topic_circle_candidate_post" candidate_post
+          WHERE candidate_post."candidateId" = candidate.id
+        )
+    `);
+    await this.$executeRawUnsafe(`
+      DELETE FROM "x_topic_circle_post"
+      WHERE "postId" LIKE 'mock\\_%' ESCAPE '\\'
+    `);
+    await this.$executeRawUnsafe(`
+      DELETE FROM "topic_circle_account_fetch_run"
+      WHERE id IN (SELECT "accountRunId" FROM _topic_circle_mock_cleanup_runs WHERE "accountRunId" IS NOT NULL)
+    `);
+    await this.$executeRawUnsafe(`
+      DELETE FROM "topic_circle_fetch_run" fetch_run
+      WHERE fetch_run.id IN (SELECT "fetchRunId" FROM _topic_circle_mock_cleanup_runs WHERE "fetchRunId" IS NOT NULL)
+        AND NOT EXISTS (
+          SELECT 1
+          FROM "topic_circle_account_fetch_run" account_run
+          WHERE account_run."fetchRunId" = fetch_run.id
+        )
+    `);
+    await this.$executeRawUnsafe(`
+      DELETE FROM "topic_circle_account_sync_state"
+      WHERE handle IN (
+        SELECT "authorHandle"
+        FROM _topic_circle_mock_cleanup_runs
+        WHERE "authorHandle" IS NOT NULL
+      )
+    `);
+  }
 }

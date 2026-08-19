@@ -3,7 +3,7 @@ import { EventWorkflowCommandsV1 } from './workflow.types';
 
 const evidenceRecordSchema = z
   .object({
-    sourceType: z.enum(['x_trend', 'x_post', 'manual', 'external']),
+    sourceType: z.enum(['x_trend', 'x_post', 'x_topic_circle', 'manual', 'external']),
     url: z.string().optional(),
     claim: z.string(),
     payload: z.unknown(),
@@ -36,10 +36,21 @@ const xTrendSourceContextSchema = z
   })
   .strict();
 
+const topicCircleSourceContextSchema = z
+  .object({
+    topicCircle: z.record(z.string(), z.unknown()),
+    candidate: z.record(z.string(), z.unknown()),
+    posts: z.array(z.record(z.string(), z.unknown())),
+    matchedRules: z.array(triggerSchema),
+  })
+  .passthrough();
+
+const eventSourceContextSchema = z.union([xTrendSourceContextSchema, topicCircleSourceContextSchema]);
+
 const eventIntakeSchema = z
   .object({
     schemaVersion: z.literal('event_intake_v1'),
-    entryMode: z.literal('x_trend'),
+    entryMode: z.enum(['x_trend', 'x_topic_circle']),
     observedAt: z.string(),
     t0: z.string().optional(),
     title: z.string(),
@@ -49,7 +60,7 @@ const eventIntakeSchema = z
     confirmedFacts: z.array(z.string()),
     unconfirmedFacts: z.array(z.string()),
     evidenceRecords: z.array(evidenceRecordSchema),
-    trendContext: xTrendSourceContextSchema,
+    trendContext: eventSourceContextSchema,
     trigger: triggerSchema,
     candidateEventIds: z.array(z.string()),
     dedupeKey: z.string(),
@@ -73,7 +84,7 @@ const createEventCommandSchema = z
       .strict(),
     eventIntake: eventIntakeSchema,
     trigger: triggerSchema,
-    sourceContext: xTrendSourceContextSchema,
+    sourceContext: eventSourceContextSchema,
     evidenceRecords: z.array(evidenceRecordSchema),
     startResponsePipeline: z.boolean(),
   })
@@ -86,7 +97,7 @@ const updateEventContextCommandSchema = z
     targetEventId: z.string(),
     reason: z.string(),
     trigger: triggerSchema.optional(),
-    sourceContextPatch: xTrendSourceContextSchema,
+    sourceContextPatch: eventSourceContextSchema,
     evidenceRecords: z.array(evidenceRecordSchema).optional(),
     startResponsePipeline: z.literal(false),
   })

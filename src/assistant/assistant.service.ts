@@ -242,7 +242,7 @@ export class AssistantService {
       accounts: this.toStringArray(topic.accounts),
       collectionFrequency: typeof topic.collectionFrequency === 'string' ? topic.collectionFrequency : '每 3 小时',
       workflowId: typeof topic.workflowId === 'string' ? topic.workflowId : 'x-topic-circle-event-formation',
-      defaultPostLimit: typeof topic.defaultPostLimit === 'number' ? topic.defaultPostLimit : config.variables.defaultPostLimit ?? 30,
+      defaultPostLimit: typeof topic.defaultPostLimit === 'number' ? topic.defaultPostLimit : config.variables.defaultPostLimit ?? 3,
     };
     const topicConfigs = existingTopics.some((item) => item.id === id || item.name === name)
       ? existingTopics.map((item) => (item.id === id || item.name === name ? nextTopic : item))

@@ -5,7 +5,7 @@ export interface WorkflowModelContext {
   [key: string]: unknown;
 }
 
-export interface GenerateWorkflowCommandsInput {
+export interface GenerateWorkflowOutputInput {
   workflowId: string;
   workflowVersion: string;
   workflowMarkdown: string;
@@ -13,6 +13,9 @@ export interface GenerateWorkflowCommandsInput {
   context: WorkflowModelContext;
 }
 
+export type GenerateWorkflowCommandsInput = GenerateWorkflowOutputInput;
+
 export interface WorkflowModelAdapter {
+  generateStructuredOutput(input: GenerateWorkflowOutputInput): Promise<unknown>;
   generateCommands(input: GenerateWorkflowCommandsInput): Promise<EventWorkflowCommandsV1>;
 }

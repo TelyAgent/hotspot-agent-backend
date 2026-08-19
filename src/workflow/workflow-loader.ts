@@ -12,8 +12,8 @@ export interface LoadedWorkflow {
 export class WorkflowLoader {
   constructor(private readonly rootDir = process.cwd()) {}
 
-  async load(workflowId: string): Promise<LoadedWorkflow> {
-    const basePath = join(this.rootDir, 'workflows', 'event-formation', workflowId);
+  async load(workflowId: string, groupPath = 'event-formation'): Promise<LoadedWorkflow> {
+    const basePath = join(this.rootDir, 'workflows', groupPath, workflowId);
     const markdownPath = join(basePath, 'WORKFLOW.md');
     const outputSchemaPath = join(basePath, 'output.schema.json');
     const markdown = await readFile(markdownPath, 'utf8');
@@ -30,8 +30,8 @@ export class WorkflowLoader {
         type: frontmatter.type as WorkflowType,
         version: String(frontmatter.version),
         status: frontmatter.status as WorkflowStatus,
-        markdownPath: `workflows/event-formation/${workflowId}/WORKFLOW.md`,
-        outputSchemaPath: `workflows/event-formation/${workflowId}/output.schema.json`,
+        markdownPath: `workflows/${groupPath}/${workflowId}/WORKFLOW.md`,
+        outputSchemaPath: `workflows/${groupPath}/${workflowId}/output.schema.json`,
         checksum,
         createdAt: now,
         updatedAt: now,

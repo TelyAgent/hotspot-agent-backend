@@ -1,0 +1,247 @@
+{
+  "title": "TopicCircleEventWorkflowCommandsV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "workflowId", "workflowVersion", "runId", "commands", "diagnostics"],
+  "properties": {
+    "schemaVersion": { "const": "event_workflow_commands_v1", "type": "string" },
+    "workflowId": { "type": "string" },
+    "workflowVersion": { "type": "string" },
+    "runId": { "type": "string" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "#/$defs/createEventCommand" },
+          { "$ref": "#/$defs/updateEventContextCommand" },
+          { "$ref": "#/$defs/ignoreSignalCommand" }
+        ]
+      }
+    },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+  },
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "message"],
+      "properties": {
+        "level": { "enum": ["info", "warning", "error"], "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "createEventCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "idempotencyKey",
+        "eventCandidate",
+        "eventIntake",
+        "trigger",
+        "sourceContext",
+        "evidenceRecords",
+        "startResponsePipeline"
+      ],
+      "properties": {
+        "type": { "const": "create_event", "type": "string" },
+        "idempotencyKey": { "type": "string" },
+        "eventCandidate": { "$ref": "#/$defs/eventCandidate" },
+        "eventIntake": { "$ref": "#/$defs/eventIntake" },
+        "trigger": { "$ref": "#/$defs/trigger" },
+        "sourceContext": { "$ref": "#/$defs/topicCircleSourceContext" },
+        "evidenceRecords": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" } },
+        "startResponsePipeline": { "type": "boolean" }
+      }
+    },
+    "updateEventContextCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "idempotencyKey",
+        "targetEventId",
+        "reason",
+        "trigger",
+        "sourceContextPatch",
+        "evidenceRecords",
+        "startResponsePipeline"
+      ],
+      "properties": {
+        "type": { "const": "update_event_context", "type": "string" },
+        "idempotencyKey": { "type": "string" },
+        "targetEventId": { "type": "string" },
+        "reason": { "type": "string" },
+        "trigger": { "$ref": "#/$defs/trigger" },
+        "sourceContextPatch": { "$ref": "#/$defs/topicCircleSourceContext" },
+        "evidenceRecords": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" } },
+        "startResponsePipeline": { "const": false, "type": "boolean" }
+      }
+    },
+    "ignoreSignalCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "idempotencyKey", "reason", "sourceRefs"],
+      "properties": {
+        "type": { "const": "ignore", "type": "string" },
+        "idempotencyKey": { "type": "string" },
+        "reason": { "type": "string" },
+        "sourceRefs": { "type": "array", "items": { "$ref": "#/$defs/sourceRef" } }
+      }
+    },
+    "eventCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "subject", "action", "object", "oneLineSummary", "normalizedEventKey", "confidence"],
+      "properties": {
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "action": { "type": "string" },
+        "object": { "type": "string" },
+        "oneLineSummary": { "type": "string" },
+        "normalizedEventKey": { "type": "string" },
+        "confidence": { "enum": ["high", "medium", "low"], "type": "string" }
+      }
+    },
+    "eventIntake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "entryMode",
+        "observedAt",
+        "t0",
+        "title",
+        "oneLineSummary",
+        "confirmationLevel",
+        "expressionBoundary",
+        "confirmedFacts",
+        "unconfirmedFacts",
+        "evidenceRecords",
+        "trendContext",
+        "trigger",
+        "candidateEventIds",
+        "dedupeKey"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "event_intake_v1", "type": "string" },
+        "entryMode": { "const": "x_topic_circle", "type": "string" },
+        "observedAt": { "type": "string" },
+        "t0": { "type": "string" },
+        "title": { "type": "string" },
+        "oneLineSummary": { "type": "string" },
+        "confirmationLevel": { "enum": ["unconfirmed", "partially_supported", "confirmed", "conflicting"], "type": "string" },
+        "expressionBoundary": { "type": "string" },
+        "confirmedFacts": { "type": "array", "items": { "type": "string" } },
+        "unconfirmedFacts": { "type": "array", "items": { "type": "string" } },
+        "evidenceRecords": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" } },
+        "trendContext": { "$ref": "#/$defs/topicCircleSourceContext" },
+        "trigger": { "$ref": "#/$defs/trigger" },
+        "candidateEventIds": { "type": "array", "items": { "type": "string" } },
+        "dedupeKey": { "type": "string" }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "reason", "t0", "observedAt"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "reason": { "type": "string" },
+        "t0": { "type": "string" },
+        "observedAt": { "type": "string" }
+      }
+    },
+    "topicCircleSourceContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topicCircle", "candidate", "posts", "matchedRules"],
+      "properties": {
+        "topicCircle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name"],
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        "candidate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title",
+            "summary",
+            "coreFact",
+            "normalizedEventKey",
+            "confidence",
+            "b3h",
+            "b24h",
+            "tmax",
+            "tmaxPostId",
+            "tmaxTop5",
+            "triggeredAt",
+            "eventId",
+            "ruleVersion"
+          ],
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "summary": { "type": "string" },
+            "coreFact": { "type": "string" },
+            "normalizedEventKey": { "type": "string" },
+            "confidence": { "enum": ["high", "medium", "low"], "type": "string" },
+            "b3h": { "type": "integer" },
+            "b24h": { "type": "integer" },
+            "tmax": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+            "tmaxPostId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+            "tmaxTop5": { "type": "boolean" },
+            "triggeredAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+            "eventId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+            "ruleVersion": { "type": "string" }
+          }
+        },
+        "posts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["postId", "authorHandle", "text", "url", "postType", "publishedAt", "metrics"],
+            "properties": {
+              "postId": { "type": "string" },
+              "authorHandle": { "type": "string" },
+              "text": { "type": "string" },
+              "url": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+              "postType": { "type": "string" },
+              "publishedAt": { "type": "string" },
+              "metrics": { "type": "object", "additionalProperties": false, "properties": {} }
+            }
+          }
+        },
+        "matchedRules": { "type": "array", "items": { "$ref": "#/$defs/trigger" } }
+      }
+    },
+    "evidenceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceType", "claim", "payload"],
+      "properties": {
+        "sourceType": { "enum": ["x_topic_circle", "x_post", "manual", "external"], "type": "string" },
+        "url": { "type": "string" },
+        "claim": { "type": "string" },
+        "payload": {}
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "sourceType", "id"],
+      "properties": {
+        "platform": { "type": "string" },
+        "sourceType": { "type": "string" },
+        "id": { "type": "string" }
+      }
+    }
+  }
+}

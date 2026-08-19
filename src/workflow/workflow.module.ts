@@ -42,6 +42,6 @@ import { XTrendContextBuilder } from './x-trend-context.builder';
     },
     WorkflowRunner,
   ],
-  exports: [WorkflowRunner],
+  exports: [WorkflowRunner, WORKFLOW_LOADER, WORKFLOW_MODEL_ADAPTER],
 })
 export class WorkflowModule {}

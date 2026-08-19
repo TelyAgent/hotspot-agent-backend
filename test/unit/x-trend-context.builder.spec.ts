@@ -125,7 +125,7 @@ describe('XTrendContextBuilder', () => {
                 accounts: ['OpenAI'],
                 collectionFrequency: '每 3 小时',
                 workflowId: 'x-topic-circle-event-formation',
-                defaultPostLimit: 30,
+                defaultPostLimit: 3,
               },
               {
                 id: 'topic-disabled',
@@ -138,7 +138,7 @@ describe('XTrendContextBuilder', () => {
                 accounts: [],
                 collectionFrequency: '每 3 小时',
                 workflowId: 'x-topic-circle-event-formation',
-                defaultPostLimit: 30,
+                defaultPostLimit: 3,
               },
             ],
           },

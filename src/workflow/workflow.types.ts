@@ -131,7 +131,7 @@ export interface CreateEventCommand {
   };
   eventIntake: EventIntakePayload;
   trigger: TriggerPayload;
-  sourceContext: XTrendSourceContext;
+  sourceContext: EventSourceContextPayload;
   evidenceRecords: EvidenceRecordPayload[];
   startResponsePipeline: boolean;
 }
@@ -142,7 +142,7 @@ export interface UpdateEventContextCommand {
   targetEventId: string;
   reason: string;
   trigger?: TriggerPayload;
-  sourceContextPatch: XTrendSourceContext;
+  sourceContextPatch: EventSourceContextPayload;
   evidenceRecords?: EvidenceRecordPayload[];
   startResponsePipeline: false;
 }
@@ -156,7 +156,7 @@ export interface IgnoreSignalCommand {
 
 export interface EventIntakePayload {
   schemaVersion: 'event_intake_v1';
-  entryMode: 'x_trend';
+  entryMode: 'x_trend' | 'x_topic_circle';
   observedAt: string;
   t0?: string;
   title: string;
@@ -166,7 +166,7 @@ export interface EventIntakePayload {
   confirmedFacts: string[];
   unconfirmedFacts: string[];
   evidenceRecords: EvidenceRecordPayload[];
-  trendContext: XTrendSourceContext;
+  trendContext: EventSourceContextPayload;
   trigger: TriggerPayload;
   candidateEventIds: string[];
   dedupeKey: string;
@@ -190,8 +190,10 @@ export interface XTrendSourceContext {
   matchedRules?: TriggerPayload[];
 }
 
+export type EventSourceContextPayload = XTrendSourceContext | Record<string, unknown>;
+
 export interface EvidenceRecordPayload {
-  sourceType: 'x_trend' | 'x_post' | 'manual' | 'external';
+  sourceType: 'x_trend' | 'x_post' | 'x_topic_circle' | 'manual' | 'external';
   url?: string;
   claim: string;
   payload?: unknown;

@@ -24,6 +24,11 @@ export interface RunXTrendEventFormationInput {
   regions: string[];
 }
 
+export interface RunTopicCircleEventFormationInput {
+  observedAt?: string;
+  context: Record<string, unknown>;
+}
+
 export interface WorkflowRunResult {
   run: WorkflowRunRecord;
   commands: WorkflowCommandRecord[];
@@ -73,12 +78,42 @@ export class WorkflowRunner {
     }
   }
 
+  async runTopicCircleEventFormation(input: RunTopicCircleEventFormationInput): Promise<WorkflowRunResult> {
+    const loadedWorkflow = await this.workflowLoader.load('topic-circle-event-formation', 'topic-circle/event-formation');
+    const workflowDefinition = await this.workflowRepository.saveWorkflowDefinition(loadedWorkflow.definition);
+    const observedAt = input.observedAt ?? new Date().toISOString();
+    const workflowRunId = `wrun_${randomUUID()}`;
+    const context = {
+      ...input.context,
+      workflowRunId,
+      observedAt,
+    };
+    await this.workflowRepository.createWorkflowRun({
+      id: workflowRunId,
+      workflowDefinitionId: workflowDefinition.id,
+      status: 'running',
+      startedAt: observedAt,
+      input: context,
+    });
+
+    try {
+      return await this.runLoadedWorkflow(loadedWorkflow, workflowRunId, context);
+    } catch (error) {
+      const failedRun = await this.workflowRepository.finishWorkflowRun(workflowRunId, {
+        status: 'failed',
+        finishedAt: new Date().toISOString(),
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { run: failedRun, commands: [], executions: [] };
+    }
+  }
+
   private async runLoadedWorkflow(
     loadedWorkflow: LoadedWorkflow,
     workflowRunId: string,
     context: object,
   ) {
-    const modelOutput = await this.modelAdapter.generateCommands({
+    const modelOutput = await this.modelAdapter.generateStructuredOutput({
       workflowId: loadedWorkflow.definition.workflowId,
       workflowVersion: loadedWorkflow.definition.version,
       workflowMarkdown: loadedWorkflow.markdown,

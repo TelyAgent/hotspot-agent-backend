@@ -29,7 +29,7 @@ const DEFAULT_TOPIC_CONFIGS = [
     accounts: ['Reuters', 'AP', 'CNNPolitics', 'POLITICO', 'axios'],
     collectionFrequency: '每 3 小时',
     workflowId: 'x-topic-circle-event-formation',
-    defaultPostLimit: 30,
+    defaultPostLimit: 3,
   },
   {
     id: 'topic-crypto-web3',
@@ -42,7 +42,7 @@ const DEFAULT_TOPIC_CONFIGS = [
     accounts: ['CoinDesk', 'Cointelegraph', 'crypto', 'WuBlockchain', 'tier10k', 'WatcherGuru', 'lookonchain'],
     collectionFrequency: '每 3 小时',
     workflowId: 'x-topic-circle-event-formation',
-    defaultPostLimit: 30,
+    defaultPostLimit: 3,
   },
   {
     id: 'topic-ai-tech',
@@ -55,7 +55,7 @@ const DEFAULT_TOPIC_CONFIGS = [
     accounts: ['OpenAI', 'AnthropicAI', 'GoogleDeepMind', 'MetaAI', 'huggingface', 'nvidia'],
     collectionFrequency: '每 3 小时',
     workflowId: 'x-topic-circle-event-formation',
-    defaultPostLimit: 30,
+    defaultPostLimit: 3,
   },
   {
     id: 'topic-macro-finance',
@@ -68,7 +68,7 @@ const DEFAULT_TOPIC_CONFIGS = [
     accounts: ['business', 'WSJmarkets', 'markets', 'financialtimes', 'zerohedge'],
     collectionFrequency: '每 3 小时',
     workflowId: 'x-topic-circle-event-formation',
-    defaultPostLimit: 30,
+    defaultPostLimit: 3,
   },
   {
     id: 'topic-prediction-market',
@@ -81,7 +81,7 @@ const DEFAULT_TOPIC_CONFIGS = [
     accounts: ['Polymarket', 'Kalshi', 'PredictIt', 'ManifoldMarkets', 'metaculus'],
     collectionFrequency: '每 3 小时',
     workflowId: 'x-topic-circle-event-formation',
-    defaultPostLimit: 30,
+    defaultPostLimit: 3,
   },
 ];
 
@@ -112,7 +112,7 @@ export function createDefaultCollectionState(): CollectionState {
           trendCollectionCron: '0 */2 * * *',
           trendEventWorkflowId: 'x-trend-event-formation',
           defaultTrendLimit: 50,
-          defaultPostLimit: 30,
+          defaultPostLimit: 3,
         },
       },
     ],

@@ -1,0 +1,53 @@
+{
+  "title": "TopicCircleClusteringOutputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "workflowId", "workflowVersion", "runId", "candidates", "diagnostics"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "topic_circle_clustering_output_v1" },
+    "workflowId": { "type": "string" },
+    "workflowVersion": { "type": "string" },
+    "runId": { "type": "string" },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "summary",
+          "coreFact",
+          "normalizedEventKey",
+          "confidence",
+          "postIds",
+          "mergeTargetCandidateId",
+          "ignoredPostIds",
+          "ignoreReason"
+        ],
+        "properties": {
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "coreFact": { "type": "string" },
+          "normalizedEventKey": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "postIds": { "type": "array", "items": { "type": "string" } },
+          "mergeTargetCandidateId": { "type": ["string", "null"] },
+          "ignoredPostIds": { "type": "array", "items": { "type": "string" } },
+          "ignoreReason": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "message"],
+        "properties": {
+          "level": { "type": "string", "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

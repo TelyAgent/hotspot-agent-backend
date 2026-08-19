@@ -47,6 +47,10 @@ export class OpenAIWorkflowModelAdapter implements WorkflowModelAdapter {
   }
 
   async generateCommands(input: GenerateWorkflowCommandsInput): Promise<EventWorkflowCommandsV1> {
+    return (await this.generateStructuredOutput(input)) as EventWorkflowCommandsV1;
+  }
+
+  async generateStructuredOutput(input: GenerateWorkflowCommandsInput): Promise<unknown> {
     if (!this.apiKey) {
       throw new Error('OPENAI_API_KEY is required for OpenAIWorkflowModelAdapter');
     }
@@ -71,7 +75,7 @@ export class OpenAIWorkflowModelAdapter implements WorkflowModelAdapter {
     }
 
     const text = this.extractOutputText(body);
-    return JSON.parse(text) as EventWorkflowCommandsV1;
+    return JSON.parse(text) as unknown;
   }
 
   private buildRequestBody(input: GenerateWorkflowCommandsInput) {

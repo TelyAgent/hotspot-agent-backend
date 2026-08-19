@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:validate": "prisma validate"
+    "db:validate": "prisma validate",
+    "db:clear-topic-circle-mock": "ts-node scripts/clear-topic-circle-mock.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

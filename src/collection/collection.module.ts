@@ -9,12 +9,11 @@ import { PrismaCollectionRepository } from './prisma-collection.repository';
 import { TwitterCollectionService } from './twitter-collection.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MonitorController } from '../monitor/monitor.controller';
-import { TopicCircleCompatController } from '../monitor/topic-circle.compat.controller';
 import { WorkflowModule } from '../workflow/workflow.module';
 
 @Module({
   imports: [PrismaModule, forwardRef(() => WorkflowModule)],
-  controllers: [CollectionController, MonitorController, TopicCircleCompatController],
+  controllers: [CollectionController, MonitorController],
   providers: [
     PrismaCollectionRepository,
     {
@@ -35,6 +34,6 @@ import { WorkflowModule } from '../workflow/workflow.module';
     TwitterCollectionService,
     CollectionSchedulerService,
   ],
-  exports: [COLLECTION_REPOSITORY, TwitterCollectionService],
+  exports: [COLLECTION_REPOSITORY, TwitterCollectionService, ToolRegistry],
 })
 export class CollectionModule {}

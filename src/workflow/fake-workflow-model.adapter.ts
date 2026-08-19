@@ -7,6 +7,10 @@ export class FakeWorkflowModelAdapter implements WorkflowModelAdapter {
   ) {}
 
   async generateCommands(input: GenerateWorkflowCommandsInput): Promise<EventWorkflowCommandsV1> {
+    return (await this.generateStructuredOutput(input)) as EventWorkflowCommandsV1;
+  }
+
+  async generateStructuredOutput(input: GenerateWorkflowCommandsInput): Promise<unknown> {
     if (this.handler) {
       return this.handler(input);
     }

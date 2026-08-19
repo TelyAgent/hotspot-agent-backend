@@ -1,5 +1,5 @@
 export type Platform = 'x';
-export type SourceType = 'trend' | 'post' | 'metric';
+export type SourceType = 'trend' | 'post' | 'metric' | 'topic_circle_post';
 export type FetchRunStatus = 'running' | 'success' | 'partial_success' | 'failed';
 
 export interface PlatformCollectionConfig {
@@ -99,6 +99,38 @@ export interface XTrendingToolOutput {
   collectedAt: string;
   items: XTrendingItem[];
   raw: unknown;
+}
+
+export interface XAccountPost {
+  postId: string;
+  authorHandle: string;
+  authorId?: string;
+  authorName?: string;
+  text: string;
+  url?: string;
+  postType: 'original' | 'quote' | 'reply' | 'repost';
+  replyToPostId?: string;
+  repostedPostId?: string;
+  quotedPostId?: string;
+  publishedAt: string;
+  metrics?: {
+    views?: number;
+    likes?: number;
+    reposts?: number;
+    replies?: number;
+    quotes?: number;
+    bookmarks?: number;
+  };
+  raw: unknown;
+}
+
+export interface XGetAccountPostsToolOutput {
+  platform: 'x';
+  sourceType: 'topic_circle_post';
+  handle: string;
+  collectedAt: string;
+  posts: XAccountPost[];
+  nextCursor?: string;
 }
 
 export interface XTrendSnapshot {

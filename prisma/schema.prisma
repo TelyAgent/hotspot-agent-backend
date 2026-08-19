@@ -53,6 +53,163 @@ model OperationAccount {
   @@map("operation_account")
 }
 
+model TopicCircleConfig {
+  id               String   @id
+  name             String   @unique
+  description      String?
+  enabled          Boolean  @default(true)
+  keywords         Json
+  positiveExamples Json
+  negativeExamples Json
+  workflowId       String
+  ruleVersion      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  accounts   TopicCircleAccount[]
+  candidates TopicCircleCandidate[]
+
+  @@map("topic_circle_config")
+}
+
+model TopicCircleAccount {
+  id            String   @id
+  topicCircleId String
+  handle        String
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  topicCircle TopicCircleConfig @relation(fields: [topicCircleId], references: [id], onDelete: Cascade)
+
+  @@unique([topicCircleId, handle])
+  @@index([handle])
+  @@map("topic_circle_account")
+}
+
+model TopicCircleFetchRun {
+  id           String    @id
+  platform     String
+  status       String
+  startedAt    DateTime
+  finishedAt   DateTime?
+  accountCount Int       @default(0)
+  itemCount    Int       @default(0)
+  error        String?
+  input        Json
+
+  accountRuns TopicCircleAccountFetchRun[]
+
+  @@index([platform, status, startedAt])
+  @@map("topic_circle_fetch_run")
+}
+
+model TopicCircleAccountSyncState {
+  id                        String    @id
+  platform                  String
+  handle                    String
+  lastSuccessfulCollectedAt DateTime?
+  lastAttemptedAt           DateTime?
+  lastError                 String?
+  updatedAt                 DateTime  @updatedAt
+
+  @@unique([platform, handle])
+  @@map("topic_circle_account_sync_state")
+}
+
+model TopicCircleAccountFetchRun {
+  id            String    @id
+  fetchRunId    String
+  topicCircleId String
+  handle        String
+  status        String
+  startedAt     DateTime
+  finishedAt    DateTime?
+  since         DateTime
+  until         DateTime
+  itemCount     Int       @default(0)
+  error         String?
+
+  fetchRun TopicCircleFetchRun @relation(fields: [fetchRunId], references: [id], onDelete: Cascade)
+
+  @@index([handle, startedAt])
+  @@map("topic_circle_account_fetch_run")
+}
+
+model XTopicCirclePost {
+  id             String   @id
+  postId         String   @unique
+  fetchRunId     String
+  accountRunId   String
+  topicCircleId  String
+  authorHandle   String
+  authorId       String?
+  authorName     String?
+  text           String
+  url            String?
+  postType       String
+  replyToPostId  String?
+  repostedPostId String?
+  quotedPostId   String?
+  publishedAt    DateTime
+  observedAt     DateTime
+  metrics        Json?
+  raw            Json
+
+  @@index([topicCircleId, publishedAt])
+  @@index([authorHandle, publishedAt])
+  @@map("x_topic_circle_post")
+}
+
+model TopicCircleCandidate {
+  id                 String    @id
+  topicCircleId      String
+  title              String
+  summary            String
+  coreFact           String
+  normalizedEventKey String
+  confidence         Float
+  status             String
+  b3h                Int       @default(0)
+  b24h               Int       @default(0)
+  tmax               Float?
+  tmaxPostId         String?
+  tmaxTop5           Boolean   @default(false)
+  triggeredAt        DateTime?
+  triggerType        String?
+  eventId            String?
+  workflowRunId      String?
+  ruleVersion        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  topicCircle TopicCircleConfig @relation(fields: [topicCircleId], references: [id], onDelete: Cascade)
+  posts TopicCircleCandidatePost[]
+
+  @@unique([topicCircleId, normalizedEventKey])
+  @@index([topicCircleId, status, updatedAt])
+  @@index([normalizedEventKey])
+  @@map("topic_circle_candidate")
+}
+
+model TopicCircleCandidatePost {
+  id                 String   @id
+  candidateId        String
+  platform           String
+  postTable          String
+  postId             String
+  handle             String
+  publishedAt        DateTime
+  contributionWindow Json
+  createdAt          DateTime @default(now())
+
+  candidate TopicCircleCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, platform, postId])
+  @@index([postId])
+  @@map("topic_circle_candidate_post")
+}
+
 model SourceFetchRun {
   id          String    @id
   platform    String

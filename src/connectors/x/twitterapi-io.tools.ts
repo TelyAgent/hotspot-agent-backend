@@ -1,4 +1,4 @@
-import { XTrendingToolOutput } from '../../collection/collection.types';
+import { XAccountPost, XGetAccountPostsToolOutput, XTrendingToolOutput } from '../../collection/collection.types';
 import { RuntimeTool } from '../tool-registry';
 
 type Fetcher = (url: string, init?: { headers?: Record<string, string> }) => Promise<ResponseLike>;
@@ -33,6 +33,61 @@ interface GetTrendingInput {
   limit?: number;
   count?: number;
   now?: string;
+}
+
+interface GetAccountPostsInput {
+  handle: string;
+  since?: string;
+  until?: string;
+  maxPages?: number;
+  includeReplies?: boolean;
+  includeQuotes?: boolean;
+  includeReposts?: boolean;
+  now?: string;
+}
+
+interface TwitterApiIoUserInfoResponse {
+  status?: 'success' | 'error';
+  msg?: string;
+  data?: {
+    id?: string;
+    userName?: string;
+    name?: string;
+  };
+  message?: string;
+}
+
+interface TwitterApiIoTimelineTweet {
+  type?: string;
+  id?: string;
+  url?: string;
+  text?: string;
+  retweetCount?: number;
+  replyCount?: number;
+  likeCount?: number;
+  quoteCount?: number;
+  viewCount?: number;
+  bookmarkCount?: number;
+  createdAt?: string;
+  isReply?: boolean;
+  inReplyToId?: string;
+  retweeted_tweet?: unknown;
+  quoted_tweet?: unknown;
+  author?: {
+    id?: string;
+    userName?: string;
+    name?: string;
+  };
+}
+
+interface TwitterApiIoTimelineResponse {
+  status?: 'success' | 'error';
+  message?: string;
+  msg?: string;
+  tweets?: TwitterApiIoTimelineTweet[];
+  data?: TwitterApiIoTimelineTweet[] | { tweets?: TwitterApiIoTimelineTweet[] };
+  has_next_page?: boolean;
+  next_cursor?: string;
 }
 
 export interface TwitterApiIoToolOptions {
@@ -111,7 +166,156 @@ export function createTwitterApiIoTools(options: TwitterApiIoToolOptions = {}): 
         );
       },
     },
+    {
+      name: 'x.getAccountPosts',
+      description: 'Fetches recent X/Twitter account posts from twitterapi.io user timeline.',
+      async invoke(input: unknown): Promise<XGetAccountPostsToolOutput> {
+        if (!apiKey) {
+          throw new Error('TWITTERAPI_IO_KEY is required for x.getAccountPosts');
+        }
+        if (!fetcher) {
+          throw new Error('fetch is not available in this runtime');
+        }
+
+        const data = input as GetAccountPostsInput;
+        const handle = normalizeHandle(data.handle);
+        const user = await fetchUserInfo({ handle, baseUrl, apiKey, fetcher });
+        const collectedAt = data.now ?? new Date().toISOString();
+        const sinceTime = data.since ? new Date(data.since).getTime() : Number.NEGATIVE_INFINITY;
+        const untilTime = data.until ? new Date(data.until).getTime() : Number.POSITIVE_INFINITY;
+        const maxPages = Math.max(1, data.maxPages ?? 5);
+        const posts: XAccountPost[] = [];
+        let cursor = '';
+
+        for (let page = 0; page < maxPages; page++) {
+          const timeline = await fetchTimelinePage({
+            userId: user.id,
+            cursor,
+            includeReplies: data.includeReplies ?? true,
+            baseUrl,
+            apiKey,
+            fetcher,
+          });
+          const tweets = extractTweets(timeline);
+          if (tweets.length === 0) break;
+
+          let reachedOlderPost = false;
+          for (const tweet of tweets) {
+            const publishedAt = tweet.createdAt ? new Date(tweet.createdAt).getTime() : collectedAt ? new Date(collectedAt).getTime() : Date.now();
+            if (publishedAt > untilTime) continue;
+            if (publishedAt < sinceTime) {
+              reachedOlderPost = true;
+              continue;
+            }
+            const post = mapTimelineTweet(tweet, handle);
+            if (!data.includeReposts && post.postType === 'repost') continue;
+            if (!data.includeQuotes && post.postType === 'quote') continue;
+            posts.push(post);
+          }
+
+          if (reachedOlderPost || !timeline.has_next_page || !timeline.next_cursor) break;
+          cursor = timeline.next_cursor;
+        }
+
+        return {
+          platform: 'x',
+          sourceType: 'topic_circle_post',
+          handle,
+          collectedAt,
+          posts,
+          nextCursor: cursor || undefined,
+        };
+      },
+    },
   ];
+}
+
+async function fetchUserInfo(input: {
+  handle: string;
+  baseUrl: string;
+  apiKey: string;
+  fetcher: Fetcher;
+}) {
+  const url = `${input.baseUrl}/twitter/user/info?userName=${encodeURIComponent(input.handle)}`;
+  const response = await input.fetcher(url, { headers: { 'X-API-Key': input.apiKey } });
+  const body = (await response.json()) as TwitterApiIoUserInfoResponse;
+  if (!response.ok || body.status === 'error') {
+    throw new Error(body.msg ?? body.message ?? `${response.status ?? ''} ${response.statusText ?? ''}`.trim());
+  }
+  if (!body.data?.id) {
+    throw new Error(`twitterapi.io user info returned no id for ${input.handle}`);
+  }
+  return {
+    id: body.data.id,
+    userName: body.data.userName ?? input.handle,
+    name: body.data.name,
+  };
+}
+
+async function fetchTimelinePage(input: {
+  userId: string;
+  cursor: string;
+  includeReplies: boolean;
+  baseUrl: string;
+  apiKey: string;
+  fetcher: Fetcher;
+}) {
+  const params = new URLSearchParams({
+    userId: input.userId,
+    includeReplies: String(input.includeReplies),
+    cursor: input.cursor,
+  });
+  const url = `${input.baseUrl}/twitter/user/tweet_timeline?${params.toString()}`;
+  const response = await input.fetcher(url, { headers: { 'X-API-Key': input.apiKey } });
+  const body = (await response.json()) as TwitterApiIoTimelineResponse;
+  if (!response.ok || body.status === 'error') {
+    throw new Error(body.msg ?? body.message ?? `${response.status ?? ''} ${response.statusText ?? ''}`.trim());
+  }
+  return body;
+}
+
+function extractTweets(body: TwitterApiIoTimelineResponse) {
+  if (Array.isArray(body.tweets)) return body.tweets;
+  if (Array.isArray(body.data)) return body.data;
+  if (body.data && !Array.isArray(body.data) && Array.isArray(body.data.tweets)) return body.data.tweets;
+  return [];
+}
+
+function mapTimelineTweet(tweet: TwitterApiIoTimelineTweet, fallbackHandle: string): XAccountPost {
+  const authorHandle = tweet.author?.userName ?? fallbackHandle;
+  return {
+    postId: tweet.id ?? `missing-${fallbackHandle}-${tweet.createdAt ?? Date.now()}`,
+    authorHandle,
+    authorId: tweet.author?.id,
+    authorName: tweet.author?.name,
+    text: tweet.text ?? '',
+    url: tweet.url,
+    postType: resolvePostType(tweet),
+    replyToPostId: tweet.inReplyToId,
+    repostedPostId: tweet.retweeted_tweet ? String((tweet.retweeted_tweet as { id?: unknown }).id ?? '') || undefined : undefined,
+    quotedPostId: tweet.quoted_tweet ? String((tweet.quoted_tweet as { id?: unknown }).id ?? '') || undefined : undefined,
+    publishedAt: tweet.createdAt ?? new Date().toISOString(),
+    metrics: {
+      views: tweet.viewCount,
+      likes: tweet.likeCount,
+      reposts: tweet.retweetCount,
+      replies: tweet.replyCount,
+      quotes: tweet.quoteCount,
+      bookmarks: tweet.bookmarkCount,
+    },
+    raw: tweet,
+  };
+}
+
+function resolvePostType(tweet: TwitterApiIoTimelineTweet): XAccountPost['postType'] {
+  if (tweet.retweeted_tweet) return 'repost';
+  if (tweet.quoted_tweet) return 'quote';
+  if (tweet.isReply || tweet.inReplyToId) return 'reply';
+  return 'original';
+}
+
+function normalizeHandle(handle: string) {
+  return handle.trim().replace(/^@/, '');
 }
 
 async function fetchRegionTrends(input: {
