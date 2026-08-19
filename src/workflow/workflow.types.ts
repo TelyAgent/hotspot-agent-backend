@@ -187,6 +187,7 @@ export interface XTrendSourceContext {
     snapshotId: string;
     representativePosts: EvidenceRecordPayload[];
   }[];
+  matchedRules?: TriggerPayload[];
 }
 
 export interface EvidenceRecordPayload {

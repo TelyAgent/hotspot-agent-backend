@@ -32,6 +32,7 @@ const xTrendSourceContextSchema = z
         })
         .strict(),
     ),
+    matchedRules: z.array(triggerSchema).optional(),
   })
   .strict();
 

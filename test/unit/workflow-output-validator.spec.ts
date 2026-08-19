@@ -21,7 +21,17 @@ describe('WorkflowOutputValidator', () => {
           idempotencyKey: 'update:test',
           targetEventId: 'event_1',
           reason: 'Repeated trend hit',
-          sourceContextPatch: { regions: [] },
+          sourceContextPatch: {
+            regions: [],
+            matchedRules: [
+              {
+                ruleId: 'TR-04',
+                reason: 'Appeared in another region',
+                t0: '2026-08-18T00:00:00.000Z',
+                observedAt: '2026-08-18T00:00:00.000Z',
+              },
+            ],
+          },
           startResponsePipeline: false,
         },
         {
@@ -45,7 +55,23 @@ describe('WorkflowOutputValidator', () => {
             confirmedFacts: [],
             unconfirmedFacts: ['X users are discussing this claim.'],
             evidenceRecords: [],
-            trendContext: { regions: [] },
+            trendContext: {
+              regions: [],
+              matchedRules: [
+                {
+                  ruleId: 'TR-01',
+                  reason: 'First top 5 hit',
+                  t0: '2026-08-18T00:00:00.000Z',
+                  observedAt: '2026-08-18T00:00:00.000Z',
+                },
+                {
+                  ruleId: 'TR-02',
+                  reason: 'Rank rose by at least 10',
+                  t0: '2026-08-18T00:00:00.000Z',
+                  observedAt: '2026-08-18T00:00:00.000Z',
+                },
+              ],
+            },
             trigger: {
               ruleId: 'TR-01',
               reason: 'First top 5 hit',
@@ -61,7 +87,23 @@ describe('WorkflowOutputValidator', () => {
             t0: '2026-08-18T00:00:00.000Z',
             observedAt: '2026-08-18T00:00:00.000Z',
           },
-          sourceContext: { regions: [] },
+          sourceContext: {
+            regions: [],
+            matchedRules: [
+              {
+                ruleId: 'TR-01',
+                reason: 'First top 5 hit',
+                t0: '2026-08-18T00:00:00.000Z',
+                observedAt: '2026-08-18T00:00:00.000Z',
+              },
+              {
+                ruleId: 'TR-02',
+                reason: 'Rank rose by at least 10',
+                t0: '2026-08-18T00:00:00.000Z',
+                observedAt: '2026-08-18T00:00:00.000Z',
+              },
+            ],
+          },
           evidenceRecords: [],
           startResponsePipeline: true,
         },

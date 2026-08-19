@@ -43,7 +43,23 @@ describe('EventCommandExecutor', () => {
         t0: '2026-08-18T02:05:00.000Z',
         observedAt: '2026-08-18T02:05:00.000Z',
       },
-      sourceContext: { regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new', representativePosts: [] }] },
+      sourceContext: {
+        regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new', representativePosts: [] }],
+        matchedRules: [
+          {
+            ruleId: 'TR-01',
+            reason: 'Top five',
+            t0: '2026-08-18T02:05:00.000Z',
+            observedAt: '2026-08-18T02:05:00.000Z',
+          },
+          {
+            ruleId: 'TR-02',
+            reason: 'Rank rose by at least 10',
+            t0: '2026-08-18T02:05:00.000Z',
+            observedAt: '2026-08-18T02:05:00.000Z',
+          },
+        ],
+      },
       evidenceRecords: [{ sourceType: 'x_trend', claim: 'AI ranked #4 on United States trends' }],
       startResponsePipeline: true,
     };
@@ -71,6 +87,16 @@ describe('EventCommandExecutor', () => {
     ]);
     expect(repository.eventIntakes).toHaveLength(1);
     expect(repository.eventSourceContexts).toHaveLength(1);
+    expect(repository.eventSourceContexts[0]).toEqual(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          matchedRules: [
+            expect.objectContaining({ ruleId: 'TR-01' }),
+            expect.objectContaining({ ruleId: 'TR-02' }),
+          ],
+        }),
+      }),
+    );
     expect(repository.eventEvidence).toHaveLength(1);
   });
 
