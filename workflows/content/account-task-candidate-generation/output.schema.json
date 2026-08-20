@@ -1,0 +1,41 @@
+{
+  "title": "AccountTaskCandidateOutputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "workflowId", "workflowVersion", "runId", "candidates"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "account_task_candidate_output_v1" },
+    "workflowId": { "type": "string" },
+    "workflowVersion": { "type": "string" },
+    "runId": { "type": "string" },
+    "candidates": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["localKey", "format", "text", "angle", "factualClaims", "uncertaintyNotes"],
+        "properties": {
+          "localKey": { "type": "string" },
+          "format": { "type": "string", "enum": ["original_post", "thread", "quote", "reply"] },
+          "text": { "type": "string" },
+          "targetPostUrl": { "type": ["string", "null"] },
+          "angle": { "type": "string" },
+          "factualClaims": { "type": "array", "items": { "type": "string" } },
+          "uncertaintyNotes": { "type": "array", "items": { "type": "string" } },
+          "productBridge": { "type": "string", "enum": ["market_bridge", "ambient_brand", "quiet_presence", "none"] }
+        }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason"],
+      "properties": {
+        "reason": { "type": "string" },
+        "riskLevel": { "type": "string", "enum": ["high", "blocked"] }
+      }
+    }
+  }
+}

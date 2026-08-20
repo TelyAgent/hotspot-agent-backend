@@ -1,0 +1,15 @@
+{
+  "title": "ContentRiskPrecheckOutputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "workflowId", "workflowVersion", "runId", "riskStatus", "candidateStatus", "reasons"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "content_risk_precheck_output_v1" },
+    "workflowId": { "type": "string" },
+    "workflowVersion": { "type": "string" },
+    "runId": { "type": "string" },
+    "riskStatus": { "type": "string", "enum": ["low", "medium", "high", "blocked"] },
+    "candidateStatus": { "type": "string", "enum": ["available", "warning", "blocked"] },
+    "reasons": { "type": "array", "items": { "type": "string" } }
+  }
+}

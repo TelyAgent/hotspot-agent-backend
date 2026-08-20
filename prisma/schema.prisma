@@ -53,6 +53,98 @@ model OperationAccount {
   @@map("operation_account")
 }
 
+model AccountResponseTask {
+  id                     String   @id
+  eventId                String
+  accountId              String
+  workflowRunId          String?
+  assignmentCommandId    String?
+  status                 String
+  priority               String
+  skill                  String
+  skillVersion           String
+  assignmentReason       String
+  riskStatus             String
+  latestCandidateBatchId String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([eventId, accountId])
+  @@index([status, priority, createdAt])
+  @@index([eventId])
+  @@index([accountId])
+  @@map("account_response_task")
+}
+
+model ContentCandidateBatch {
+  id              String   @id
+  taskId          String
+  workflowRunId   String
+  generationKind  String
+  userInstruction String?
+  status          String
+  createdAt       DateTime @default(now())
+
+  @@index([taskId, createdAt])
+  @@map("content_candidate_batch")
+}
+
+model ContentCandidate {
+  id               String   @id
+  batchId          String
+  taskId           String
+  localKey         String
+  format           String
+  text             String
+  targetPostUrl    String?
+  angle            String
+  factualClaims    Json
+  uncertaintyNotes Json
+  productBridge    String?
+  riskStatus       String
+  precheckPayload  Json?
+  status           String
+  createdAt        DateTime @default(now())
+
+  @@index([taskId, status])
+  @@index([batchId])
+  @@map("content_candidate")
+}
+
+model PublicationRecord {
+  id             String    @id
+  taskId         String
+  candidateId    String
+  eventId        String
+  accountId      String
+  url            String    @unique
+  status         String
+  publishedAt    DateTime
+  trackingStatus String
+  trackingEndsAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([eventId, accountId])
+  @@index([taskId])
+  @@map("publication_record")
+}
+
+model PublicationMetric {
+  id                  String   @id
+  publicationRecordId String
+  capturedAt          DateTime
+  likes               Int      @default(0)
+  replies             Int      @default(0)
+  reposts             Int      @default(0)
+  quotes              Int?
+  views               Int?
+  raw                 Json?
+  createdAt           DateTime @default(now())
+
+  @@index([publicationRecordId, capturedAt])
+  @@map("publication_metric")
+}
+
 model TopicCircleConfig {
   id               String   @id
   name             String   @unique

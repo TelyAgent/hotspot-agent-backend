@@ -1,5 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { CONTENT_RESPONSE_STARTER } from '../content/content.tokens';
 import { WORKFLOW_REPOSITORY } from './workflow.tokens';
 import { WorkflowRepository } from './workflow.repository';
 import {
@@ -17,9 +18,22 @@ export interface ExecuteEventCommandInput {
   now?: string;
 }
 
+export interface ContentResponseStarter {
+  startForEvent(input: {
+    eventId: string;
+    workflowRunId: string;
+    workflowCommandId: string;
+    triggerReason: string;
+    now?: string;
+  }): Promise<unknown>;
+}
+
 @Injectable()
 export class EventCommandExecutor {
-  constructor(@Inject(WORKFLOW_REPOSITORY) private readonly workflowRepository: WorkflowRepository) {}
+  constructor(
+    @Inject(WORKFLOW_REPOSITORY) private readonly workflowRepository: WorkflowRepository,
+    @Optional() @Inject(CONTENT_RESPONSE_STARTER) private readonly contentResponseStarter?: ContentResponseStarter,
+  ) {}
 
   async execute(input: ExecuteEventCommandInput): Promise<WorkflowCommandExecutionRecord> {
     const existingExecution = await this.workflowRepository.findCommandExecutionByIdempotencyKey(
@@ -46,7 +60,7 @@ export class EventCommandExecutor {
   private async executeCommand(input: ExecuteEventCommandInput): Promise<string | undefined> {
     switch (input.command.type) {
       case 'create_event':
-        return this.executeCreateEvent(input.workflowRunId, input.command);
+        return this.executeCreateEvent(input.workflowRunId, input.workflowCommandId, input.command, input.now);
       case 'update_event_context':
         return this.executeUpdateEventContext(input.workflowRunId, input.command);
       case 'ignore':
@@ -55,7 +69,12 @@ export class EventCommandExecutor {
     }
   }
 
-  private async executeCreateEvent(workflowRunId: string, command: CreateEventCommand) {
+  private async executeCreateEvent(
+    workflowRunId: string,
+    workflowCommandId: string,
+    command: CreateEventCommand,
+    now?: string,
+  ) {
     const event =
       (await this.workflowRepository.findEventByNormalizedKey(command.eventCandidate.normalizedEventKey)) ??
       (await this.workflowRepository.createEvent({
@@ -70,6 +89,15 @@ export class EventCommandExecutor {
     await this.saveEventIntake(workflowRunId, event.id, command);
     await this.saveEventSourceContext(workflowRunId, event.id, command.eventIntake.entryMode, command.sourceContext);
     await this.saveEvidenceRecords(workflowRunId, event.id, command.evidenceRecords);
+    if (command.startResponsePipeline) {
+      await this.contentResponseStarter?.startForEvent({
+        eventId: event.id,
+        workflowRunId,
+        workflowCommandId,
+        triggerReason: command.trigger.reason,
+        now,
+      });
+    }
     return event.id;
   }
 

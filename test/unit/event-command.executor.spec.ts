@@ -100,6 +100,71 @@ describe('EventCommandExecutor', () => {
     expect(repository.eventEvidence).toHaveLength(1);
   });
 
+  it('starts the content response pipeline after creating an event that requests response', async () => {
+    const repository = new InMemoryWorkflowRepository();
+    const responseStarter = {
+      startForEvent: jest.fn().mockResolvedValue({ createdOrReused: 1, skippedAccounts: [] }),
+    };
+    const executor = new EventCommandExecutor(repository, responseStarter);
+    const command: CreateEventCommand = {
+      type: 'create_event',
+      idempotencyKey: 'create:ai:response',
+      eventCandidate: {
+        title: 'AI enters top trends',
+        oneLineSummary: 'AI enters the United States X trend top five.',
+        normalizedEventKey: 'ai-enters-top-trends-response',
+        confidence: 'high',
+      },
+      eventIntake: {
+        schemaVersion: 'event_intake_v1',
+        entryMode: 'x_trend',
+        observedAt: '2026-08-18T02:05:00.000Z',
+        t0: '2026-08-18T02:05:00.000Z',
+        title: 'AI enters top trends',
+        oneLineSummary: 'AI enters the United States X trend top five.',
+        confirmationLevel: 'unconfirmed',
+        expressionBoundary: 'X trend only',
+        confirmedFacts: [],
+        unconfirmedFacts: ['AI is trending on X'],
+        evidenceRecords: [],
+        trendContext: { regions: [] },
+        trigger: {
+          ruleId: 'TR-01',
+          reason: 'Top five',
+          t0: '2026-08-18T02:05:00.000Z',
+          observedAt: '2026-08-18T02:05:00.000Z',
+        },
+        candidateEventIds: [],
+        dedupeKey: 'ai-enters-top-trends-response',
+      },
+      trigger: {
+        ruleId: 'TR-01',
+        reason: 'Top five',
+        t0: '2026-08-18T02:05:00.000Z',
+        observedAt: '2026-08-18T02:05:00.000Z',
+      },
+      sourceContext: { regions: [] },
+      evidenceRecords: [],
+      startResponsePipeline: true,
+    };
+
+    const execution = await executor.execute({
+      workflowRunId: 'wrun_test',
+      workflowCommandId: 'cmd_create',
+      command,
+      now: '2026-08-18T02:06:00.000Z',
+    });
+
+    expect(execution.status).toBe('success');
+    expect(responseStarter.startForEvent).toHaveBeenCalledWith({
+      eventId: expect.stringMatching(/^event_/),
+      workflowRunId: 'wrun_test',
+      workflowCommandId: 'cmd_create',
+      triggerReason: 'Top five',
+      now: '2026-08-18T02:06:00.000Z',
+    });
+  });
+
   it('updates existing event context and skips duplicate idempotency keys', async () => {
     const repository = new InMemoryWorkflowRepository();
     const executor = new EventCommandExecutor(repository);

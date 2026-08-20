@@ -1,0 +1,68 @@
+{
+  "title": "AccountAssignmentCommandsV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "workflowId", "workflowVersion", "runId", "commands"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "account_assignment_commands_v1" },
+    "workflowId": { "type": "string" },
+    "workflowVersion": { "type": "string" },
+    "runId": { "type": "string" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "eventId", "accountId", "skill", "skillVersion", "assignmentReason", "priority", "source"],
+            "properties": {
+              "type": { "type": "string", "const": "create_account_response_task" },
+              "idempotencyKey": { "type": "string" },
+              "eventId": { "type": "string" },
+              "accountId": { "type": "string" },
+              "skill": { "type": "string" },
+              "skillVersion": { "type": "string" },
+              "assignmentReason": { "type": "string" },
+              "priority": { "type": "string", "enum": ["urgent", "high", "normal", "low"] },
+              "source": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["workflowRunId", "triggerReason"],
+                "properties": {
+                  "workflowRunId": { "type": "string" },
+                  "commandId": { "type": "string" },
+                  "triggerReason": { "type": "string" }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "idempotencyKey", "eventId", "accountId", "reason"],
+            "properties": {
+              "type": { "type": "string", "enum": ["observe_account", "skip_account"] },
+              "idempotencyKey": { "type": "string" },
+              "eventId": { "type": "string" },
+              "accountId": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "message"],
+        "properties": {
+          "level": { "type": "string", "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { CollectionModule } from '../collection/collection.module';
+import { ContentModule } from '../content/content.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventCommandExecutor } from './event-command.executor';
 import { PrismaWorkflowRepository } from './prisma-workflow.repository';
@@ -17,7 +18,7 @@ import {
 import { XTrendContextBuilder } from './x-trend-context.builder';
 
 @Module({
-  imports: [PrismaModule, forwardRef(() => CollectionModule)],
+  imports: [PrismaModule, forwardRef(() => CollectionModule), ContentModule],
   controllers: [WorkflowController],
   providers: [
     PrismaWorkflowRepository,
