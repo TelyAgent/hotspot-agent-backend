@@ -1,13 +1,13 @@
 import { ContentCommandExecutor } from '../../src/content/content-command.executor';
 import { InMemoryContentRepository } from '../../src/content/in-memory-content.repository';
-import { CreateAccountResponseTaskCommand } from '../../src/content/content.types';
+import { CreateContentTaskCommand } from '../../src/content/content.types';
 
 describe('ContentCommandExecutor', () => {
-  it('creates an account response task without creating candidates', async () => {
+  it('creates a content task without creating candidates', async () => {
     const repository = new InMemoryContentRepository();
     const executor = new ContentCommandExecutor(repository);
-    const command: CreateAccountResponseTaskCommand = {
-      type: 'create_account_response_task',
+    const command: CreateContentTaskCommand = {
+      type: 'create_content_task',
       idempotencyKey: 'task:event_1:account_flash',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -32,12 +32,12 @@ describe('ContentCommandExecutor', () => {
     expect(execution).toMatchObject({
       workflowRunId: 'wrun_assign',
       workflowCommandId: 'cmd_task',
-      commandType: 'create_account_response_task',
+      commandType: 'create_content_task',
       idempotencyKey: 'task:event_1:account_flash',
       status: 'success',
       targetTaskId: expect.any(String),
     });
-    expect(repository.accountResponseTasks).toEqual([
+    expect(repository.contentTasks).toEqual([
       expect.objectContaining({
         eventId: 'event_1',
         accountId: 'account_flash',
@@ -58,8 +58,8 @@ describe('ContentCommandExecutor', () => {
   it('skips duplicate idempotency keys and does not create another task', async () => {
     const repository = new InMemoryContentRepository();
     const executor = new ContentCommandExecutor(repository);
-    const command: CreateAccountResponseTaskCommand = {
-      type: 'create_account_response_task',
+    const command: CreateContentTaskCommand = {
+      type: 'create_content_task',
       idempotencyKey: 'task:event_1:account_flash',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -91,14 +91,14 @@ describe('ContentCommandExecutor', () => {
       status: 'skipped',
       targetTaskId: first.targetTaskId,
     });
-    expect(repository.accountResponseTasks).toHaveLength(1);
+    expect(repository.contentTasks).toHaveLength(1);
   });
 
   it('reuses an existing event account task even when the assignment command has a new idempotency key', async () => {
     const repository = new InMemoryContentRepository();
     const executor = new ContentCommandExecutor(repository);
-    const firstCommand: CreateAccountResponseTaskCommand = {
-      type: 'create_account_response_task',
+    const firstCommand: CreateContentTaskCommand = {
+      type: 'create_content_task',
       idempotencyKey: 'task:event_1:account_flash:first',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -111,7 +111,7 @@ describe('ContentCommandExecutor', () => {
         triggerReason: 'TR-01 top five trend',
       },
     };
-    const secondCommand: CreateAccountResponseTaskCommand = {
+    const secondCommand: CreateContentTaskCommand = {
       ...firstCommand,
       idempotencyKey: 'task:event_1:account_flash:second',
       assignmentReason: 'Later duplicate trigger.',
@@ -135,7 +135,7 @@ describe('ContentCommandExecutor', () => {
       status: 'skipped',
       targetTaskId: first.targetTaskId,
     });
-    expect(repository.accountResponseTasks).toHaveLength(1);
+    expect(repository.contentTasks).toHaveLength(1);
     expect(repository.commandExecutions).toHaveLength(2);
   });
 });

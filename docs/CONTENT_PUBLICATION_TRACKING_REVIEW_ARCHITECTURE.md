@@ -127,7 +127,7 @@ export const DEFAULT_PUBLICATION_TRACKING_RULE = {
 指标接口失败时：
 
 - 不改变 `PublicationRecord.status`。
-- 不改变 `AccountResponseTask.status`。
+- 不改变 `ContentTask.status`。
 - `trackingStatus` 更新为 `tracking_error`。
 - `lastTrackingError` 保存错误信息。
 - `lastTrackingErrorAt` 保存失败时间。

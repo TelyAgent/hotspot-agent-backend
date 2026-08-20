@@ -14,7 +14,7 @@ describe('Content workflow adapters', () => {
         runId: 'wrun_assignment',
         commands: [
           {
-            type: 'create_account_response_task',
+            type: 'create_content_task',
             idempotencyKey: 'content_assignment:event_1:account_persona',
             eventId: 'event_1',
             accountId: 'account_persona',

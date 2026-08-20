@@ -78,10 +78,10 @@ async function main() {
             create: {
               id: `${workflowCommandId}:${account.id}`,
               workflowRunId,
-              type: 'create_account_response_task',
+              type: 'create_content_task',
               idempotencyKey: `${workflowCommandId}:${account.id}`,
               payload: {
-                type: 'create_account_response_task',
+                type: 'create_content_task',
                 eventId: event.id,
                 accountId: account.id,
                 source: 'manual_existing_event_assignment',

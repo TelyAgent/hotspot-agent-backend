@@ -1,5 +1,5 @@
 import {
-  AccountResponseTaskRecord,
+  ContentTaskRecord,
   ContentCommandExecutionRecord,
   ContentCandidateBatchRecord,
   ContentCandidateRecord,
@@ -15,14 +15,14 @@ import {
   PublicationRecord,
 } from './content.types';
 
-export interface CreateAccountResponseTaskInput {
+export interface CreateContentTaskInput {
   id: string;
   eventId: string;
   accountId: string;
   workflowRunId?: string;
   assignmentCommandId?: string;
-  status: AccountResponseTaskRecord['status'];
-  priority: AccountResponseTaskRecord['priority'];
+  status: ContentTaskRecord['status'];
+  priority: ContentTaskRecord['priority'];
   skill: string;
   skillVersion: string;
   assignmentReason: string;
@@ -36,22 +36,22 @@ export interface ContentRepository {
     idempotencyKey: string,
   ): MaybePromise<ContentCommandExecutionRecord | undefined>;
   saveCommandExecution(execution: ContentCommandExecutionRecord): MaybePromise<ContentCommandExecutionRecord>;
-  findAccountResponseTaskByEventAndAccount(
+  findContentTaskByEventAndAccount(
     eventId: string,
     accountId: string,
-  ): MaybePromise<AccountResponseTaskRecord | undefined>;
-  createAccountResponseTask(input: CreateAccountResponseTaskInput): MaybePromise<AccountResponseTaskRecord>;
-  updateAccountResponseTask(
+  ): MaybePromise<ContentTaskRecord | undefined>;
+  createContentTask(input: CreateContentTaskInput): MaybePromise<ContentTaskRecord>;
+  updateContentTask(
     id: string,
     patch: Partial<
       Pick<
-        AccountResponseTaskRecord,
+        ContentTaskRecord,
         'status' | 'riskStatus' | 'latestCandidateBatchId' | 'updatedAt'
       >
     >,
-  ): MaybePromise<AccountResponseTaskRecord>;
-  listAccountResponseTasks(): MaybePromise<AccountResponseTaskRecord[]>;
-  findAccountResponseTaskById(id: string): MaybePromise<AccountResponseTaskRecord | undefined>;
+  ): MaybePromise<ContentTaskRecord>;
+  listContentTasks(): MaybePromise<ContentTaskRecord[]>;
+  findContentTaskById(id: string): MaybePromise<ContentTaskRecord | undefined>;
   listOperationAccounts(): MaybePromise<OperationAccountRecord[]>;
   findOperationAccountById(id: string): MaybePromise<OperationAccountRecord | undefined>;
   findEventContextPackById(id: string): MaybePromise<EventContextPackRecord | undefined>;

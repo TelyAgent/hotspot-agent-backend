@@ -4,7 +4,7 @@ import { ContentRepository } from './content.repository';
 import {
   ContentCommand,
   ContentCommandExecutionRecord,
-  CreateAccountResponseTaskCommand,
+  CreateContentTaskCommand,
 } from './content.types';
 import { CONTENT_REPOSITORY } from './content.tokens';
 
@@ -30,8 +30,8 @@ export class ContentCommandExecutor {
       });
     }
 
-    if (input.command.type === 'create_account_response_task') {
-      const existingTask = await this.contentRepository.findAccountResponseTaskByEventAndAccount(
+    if (input.command.type === 'create_content_task') {
+      const existingTask = await this.contentRepository.findContentTaskByEventAndAccount(
         input.command.eventId,
         input.command.accountId,
       );
@@ -56,7 +56,7 @@ export class ContentCommandExecutor {
 
   private async executeCommand(input: ExecuteContentCommandInput): Promise<string | undefined> {
     switch (input.command.type) {
-      case 'create_account_response_task':
+      case 'create_content_task':
         return this.executeCreateTask(input.workflowRunId, input.workflowCommandId, input.command, input.now);
       case 'observe_account':
       case 'skip_account':
@@ -67,10 +67,10 @@ export class ContentCommandExecutor {
   private async executeCreateTask(
     workflowRunId: string,
     workflowCommandId: string,
-    command: CreateAccountResponseTaskCommand,
+    command: CreateContentTaskCommand,
     now = new Date().toISOString(),
   ) {
-    const existing = await this.contentRepository.findAccountResponseTaskByEventAndAccount(
+    const existing = await this.contentRepository.findContentTaskByEventAndAccount(
       command.eventId,
       command.accountId,
     );
@@ -78,8 +78,8 @@ export class ContentCommandExecutor {
       return existing.id;
     }
 
-    const task = await this.contentRepository.createAccountResponseTask({
-      id: `account_response_task_${randomUUID()}`,
+    const task = await this.contentRepository.createContentTask({
+      id: `content_task_${randomUUID()}`,
       eventId: command.eventId,
       accountId: command.accountId,
       workflowRunId,

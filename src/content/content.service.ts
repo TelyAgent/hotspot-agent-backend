@@ -11,7 +11,7 @@ import {
 } from './content-risk-prechecker';
 import { CONTENT_REPOSITORY } from './content.tokens';
 import { ContentRepository } from './content.repository';
-import { AccountResponseTaskRecord, EventContextPackRecord, OperationAccountRecord } from './content.types';
+import { ContentTaskRecord, EventContextPackRecord, OperationAccountRecord } from './content.types';
 import { CONTENT_CANDIDATE_GENERATOR, CONTENT_RISK_PRECHECKER } from './content.tokens';
 import {
   DEFAULT_PUBLICATION_TRACKING_RULE,
@@ -60,7 +60,7 @@ export class ContentService {
 
   async listTasks() {
     const [tasks, candidates, accounts] = await Promise.all([
-      this.contentRepository.listAccountResponseTasks(),
+      this.contentRepository.listContentTasks(),
       this.contentRepository.listContentCandidates(),
       this.contentRepository.listOperationAccounts(),
     ]);
@@ -89,7 +89,7 @@ export class ContentService {
   }
 
   async getTask(id: string) {
-    const task = await this.contentRepository.findAccountResponseTaskById(id);
+    const task = await this.contentRepository.findContentTaskById(id);
     if (!task) {
       throw new NotFoundException(`Content task not found: ${id}`);
     }
@@ -107,7 +107,7 @@ export class ContentService {
   }
 
   async generateCandidates(id: string, request: GenerateCandidatesRequest = {}) {
-    const task = await this.contentRepository.findAccountResponseTaskById(id);
+    const task = await this.contentRepository.findContentTaskById(id);
     if (!task) {
       throw new NotFoundException(`Content task not found: ${id}`);
     }
@@ -186,7 +186,7 @@ export class ContentService {
       })),
     );
     const taskRiskStatus = highestRisk(precheckResults);
-    const updatedTask = await this.contentRepository.updateAccountResponseTask(task.id, {
+    const updatedTask = await this.contentRepository.updateContentTask(task.id, {
       status: candidates.some((candidate) => candidate.status === 'available' || candidate.status === 'warning')
         ? 'ready_for_publish'
         : 'precheck_blocked',
@@ -250,7 +250,7 @@ export class ContentService {
     });
     await Promise.all([
       this.contentRepository.updateContentCandidate(candidate.id, { status: 'published' }),
-      this.contentRepository.updateAccountResponseTask(task.id, {
+      this.contentRepository.updateContentTask(task.id, {
         status: 'published',
         updatedAt: now,
       }),
@@ -285,7 +285,7 @@ export class ContentService {
       : { trackingStatus: 'tracking' };
     await Promise.all([
       this.contentRepository.updatePublicationRecord(publication.id, publicationPatch),
-      this.contentRepository.updateAccountResponseTask(publication.taskId, {
+      this.contentRepository.updateContentTask(publication.taskId, {
         status: 'tracking',
         updatedAt: now,
       }),
@@ -316,7 +316,7 @@ export class ContentService {
       trackingStatus: 'completed',
       trackingEndsAt: now,
     });
-    await this.contentRepository.updateAccountResponseTask(publication.taskId, {
+    await this.contentRepository.updateContentTask(publication.taskId, {
       status: 'completed',
       updatedAt: now,
     });
@@ -324,7 +324,7 @@ export class ContentService {
   }
 
   private async requireTask(id: string) {
-    const task = await this.contentRepository.findAccountResponseTaskById(id);
+    const task = await this.contentRepository.findContentTaskById(id);
     if (!task) {
       throw new NotFoundException(`Content task not found: ${id}`);
     }
@@ -332,7 +332,7 @@ export class ContentService {
   }
 
   private toTaskItem(
-    task: AccountResponseTaskRecord,
+    task: ContentTaskRecord,
     candidateCount: number,
     eventContextPack?: EventContextPackRecord,
     account?: OperationAccountRecord,

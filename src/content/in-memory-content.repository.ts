@@ -1,5 +1,5 @@
 import {
-  AccountResponseTaskRecord,
+  ContentTaskRecord,
   ContentCommandExecutionRecord,
   ContentCandidateBatchRecord,
   ContentCandidateRecord,
@@ -13,11 +13,11 @@ import {
   PublicationMetricRecord,
   PublicationRecord,
 } from './content.types';
-import { ContentRepository, CreateAccountResponseTaskInput } from './content.repository';
+import { ContentRepository, CreateContentTaskInput } from './content.repository';
 
 export class InMemoryContentRepository implements ContentRepository {
   readonly commandExecutions: ContentCommandExecutionRecord[] = [];
-  readonly accountResponseTasks: AccountResponseTaskRecord[] = [];
+  readonly contentTasks: ContentTaskRecord[] = [];
   readonly contentCandidateBatches: ContentCandidateBatchRecord[] = [];
   readonly contentCandidates: ContentCandidateRecord[] = [];
   readonly publicationRecords: PublicationRecord[] = [];
@@ -37,41 +37,41 @@ export class InMemoryContentRepository implements ContentRepository {
     return execution;
   }
 
-  findAccountResponseTaskByEventAndAccount(
+  findContentTaskByEventAndAccount(
     eventId: string,
     accountId: string,
-  ): AccountResponseTaskRecord | undefined {
-    return this.accountResponseTasks.find((task) => task.eventId === eventId && task.accountId === accountId);
+  ): ContentTaskRecord | undefined {
+    return this.contentTasks.find((task) => task.eventId === eventId && task.accountId === accountId);
   }
 
-  createAccountResponseTask(input: CreateAccountResponseTaskInput): AccountResponseTaskRecord {
-    const existing = this.findAccountResponseTaskByEventAndAccount(input.eventId, input.accountId);
+  createContentTask(input: CreateContentTaskInput): ContentTaskRecord {
+    const existing = this.findContentTaskByEventAndAccount(input.eventId, input.accountId);
     if (existing) {
       return existing;
     }
     const task = { ...input };
-    this.accountResponseTasks.push(task);
+    this.contentTasks.push(task);
     return task;
   }
 
-  updateAccountResponseTask(
+  updateContentTask(
     id: string,
-    patch: Partial<AccountResponseTaskRecord>,
-  ): AccountResponseTaskRecord {
-    const task = this.findAccountResponseTaskById(id);
+    patch: Partial<ContentTaskRecord>,
+  ): ContentTaskRecord {
+    const task = this.findContentTaskById(id);
     if (!task) {
-      throw new Error(`Account response task not found: ${id}`);
+      throw new Error(`Content task not found: ${id}`);
     }
     Object.assign(task, patch);
     return task;
   }
 
-  listAccountResponseTasks(): AccountResponseTaskRecord[] {
-    return [...this.accountResponseTasks];
+  listContentTasks(): ContentTaskRecord[] {
+    return [...this.contentTasks];
   }
 
-  findAccountResponseTaskById(id: string): AccountResponseTaskRecord | undefined {
-    return this.accountResponseTasks.find((task) => task.id === id);
+  findContentTaskById(id: string): ContentTaskRecord | undefined {
+    return this.contentTasks.find((task) => task.id === id);
   }
 
   listOperationAccounts(): OperationAccountRecord[] {

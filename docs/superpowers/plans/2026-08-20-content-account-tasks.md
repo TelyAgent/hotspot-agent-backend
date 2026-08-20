@@ -31,7 +31,7 @@
 
 **接口：**
 - 输出：`ContentCommandExecutor.execute(input): Promise<ContentCommandExecutionRecord>`
-- 输出：`ContentRepository.createAccountResponseTask(input): MaybePromise<AccountResponseTaskRecord>`
+- 输出：`ContentRepository.createContentTask(input): MaybePromise<ContentTaskRecord>`
 
 - [x] **步骤 1：写失败测试**
 
@@ -69,7 +69,7 @@
 
 - [x] **步骤 3：添加 Prisma 模型与 repository 映射**
 
-新增 `AccountResponseTask`、`ContentCandidateBatch`、`ContentCandidate`、`PublicationRecord`。
+新增 `ContentTask`、`ContentCandidateBatch`、`ContentCandidate`、`PublicationRecord`。
 
 - [x] **步骤 4：运行校验和测试**
 

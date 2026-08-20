@@ -2,28 +2,34 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
   {
     key: 'respond-with-breaking-brief',
     name: '快讯型',
-    description: '把热点压缩为可快速扫描的单一事实更新',
+    description: '值班新闻编辑型账号：反应快、表述克制、只把已确认的核心事实讲清楚，不做情绪化延展。',
     xAccountId: '@nikalatekickoff',
     type: '基础生产线',
-    personaType: '把热点压缩为可快速扫描的单一事实更新',
+    personaType: '值班新闻编辑型账号：反应快、表述克制、只把已确认的核心事实讲清楚，不做情绪化延展。',
+    legacyPersonaType: '把热点压缩为可快速扫描的单一事实更新',
+    contentPromptRule: '先给结论，再补充时间、地点、主体、动作和证据边界；只使用已确认事实，不扩写情绪、不做未经证实的因果判断。',
     skill: 'respond-with-breaking-brief',
   },
   {
     key: 'develop-hotspot-deep-dive',
     name: '长文/深度分析型',
-    description: '解释背景、已知与未知、关键影响和后续观察点',
+    description: '冷静的背景解释者：擅长把热点放回历史、利益关系和后续影响中分析，强调已知、未知与观察变量。',
     xAccountId: '@minaafterhrs',
     type: '基础生产线',
-    personaType: '解释背景、已知与未知、关键影响和后续观察点',
+    personaType: '冷静的背景解释者：擅长把热点放回历史、利益关系和后续影响中分析，强调已知、未知与观察变量。',
+    legacyPersonaType: '解释背景、已知与未知、关键影响和后续观察点',
+    contentPromptRule: '用“背景—关键变化—可能影响—仍不确定—后续观察”组织内容；避免空泛评论，每个判断都要能回到证据或事实边界。',
     skill: 'develop-hotspot-deep-dive',
   },
   {
     key: 'bridge-hotspot-to-product',
     name: '产品承接型',
-    description: '以 PredX 产品账号对热点作适当品牌或市场承接',
+    description: '克制的产品连接者：从热点中寻找真实的预测、概率和市场讨论入口，只在相关时自然带出 PredX。',
     xAccountId: '@MilesOnEvek1',
     type: '基础生产线',
-    personaType: '以 PredX 产品账号对热点作适当品牌或市场承接',
+    personaType: '克制的产品连接者：从热点中寻找真实的预测、概率和市场讨论入口，只在相关时自然带出 PredX。',
+    legacyPersonaType: '以 PredX 产品账号对热点作适当品牌或市场承接',
+    contentPromptRule: '只有当热点能自然连接到预测、概率、事件市场或用户决策时才承接产品；禁止硬广、收益承诺和虚构市场。',
     skill: 'bridge-hotspot-to-product',
   },
   {
@@ -33,6 +39,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@NoraPricesux',
     type: '人设账号',
     personaType: '机制、激励、指标误读和二阶洞察',
+    contentPromptRule: '从机制、激励、指标口径和二阶后果切入；少复述新闻，多指出“为什么这个信号可能被误读”。',
     skill: 'Nick Preszler',
   },
   {
@@ -42,6 +49,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@SignalKaiPmmur',
     type: '人设账号',
     personaType: '社区原生预测问题、参与和规则解释',
+    contentPromptRule: '把热点转成社区能讨论和校准的问题；解释规则、参与方式和争议点，避免替用户下结论。',
     skill: 'Manifold Markets',
   },
   {
@@ -51,6 +59,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@Ox_RheaCalder',
     type: '人设账号',
     personaType: '金融、加密、政策和机构性快讯',
+    contentPromptRule: '优先突出金融、加密、政策或机构动作中的硬信息；语气短促清晰，避免未经确认的市场归因。',
     skill: 'WatcherGuru',
   },
   {
@@ -60,6 +69,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@JulesTan_sol',
     type: '人设账号',
     personaType: '工具、研究、教育路径和资源清单',
+    contentPromptRule: '把热点拆成可学习、可验证、可继续研究的路径；适合给工具、资料、概念解释和行动清单。',
     skill: 'RohOnChain',
   },
   {
@@ -69,6 +79,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@NoraField_btc',
     type: '人设账号',
     personaType: '公司、监管、政治、资金与利益后果',
+    contentPromptRule: '从公司、监管、政治、资金流和利益相关方角度解释影响；明确区分事实、推测和市场解读。',
     skill: 'Unusual Whales',
   },
   {
@@ -78,6 +89,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@MaraVotes',
     type: '人设账号',
     personaType: '明星、音乐、体育、创作者和病毒事件',
+    contentPromptRule: '用大众能快速理解的语言解释娱乐、体育和病毒事件；保留趣味，但不夸大未证实传闻。',
     skill: 'Daily Loud',
   },
   {
@@ -87,6 +99,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@MateoMargins',
     type: '人设账号',
     personaType: '大众化、积极、可分享的成就与事实卡',
+    contentPromptRule: '提炼积极、清楚、适合转发的事实卡片；避免阴谋论和复杂行业黑话。',
     skill: 'Pubity',
   },
   {
@@ -96,6 +109,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@SashaBlocksPM',
     type: '人设账号',
     personaType: '概率校准、基准、激励与可证伪分析',
+    contentPromptRule: '用概率、基准率、样本偏差和可证伪条件分析热点；避免确定化措辞，强调预测如何被更新。',
     skill: 'Nate Silver',
   },
   {
@@ -105,6 +119,7 @@ export const DEFAULT_CONTENT_ACCOUNT_SETTINGS = [
     xAccountId: '@EliasMightBeWrong',
     type: '人设账号',
     personaType: '预测市场规则、结算、资金流、异常与复盘',
+    contentPromptRule: '聚焦预测市场的规则、结算条件、盘口变化、资金流和异常行为；把争议拆成可核验的问题。',
     skill: 'Domer',
   },
 ] as const;

@@ -6,7 +6,7 @@ import { PublicationMetricsCollector } from '../../src/content/publication-metri
 describe('ContentTrackingSchedulerService', () => {
   it('collects due publication metrics, skips recent snapshots, and extends well performing posts', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push(task('task_due'), task('task_recent'), task('task_normal_recent'));
+    repository.contentTasks.push(task('task_due'), task('task_recent'), task('task_normal_recent'));
     repository.publicationRecords.push(
       publication('publication_due', 'task_due', '2026-08-27T01:30:00.000Z'),
       publication('publication_recent', 'task_recent', '2026-08-27T01:30:00.000Z'),
@@ -64,7 +64,7 @@ describe('ContentTrackingSchedulerService', () => {
         }),
       ]),
     );
-    expect(repository.accountResponseTasks.find((item) => item.id === 'task_due')).toEqual(
+    expect(repository.contentTasks.find((item) => item.id === 'task_due')).toEqual(
       expect.objectContaining({ status: 'tracking' }),
     );
     expect(repository.publicationRecords.find((item) => item.id === 'publication_due')).toEqual(
@@ -81,7 +81,7 @@ describe('ContentTrackingSchedulerService', () => {
 
   it('records tracking errors without changing publication status', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push(task('task_failed'));
+    repository.contentTasks.push(task('task_failed'));
     repository.publicationRecords.push(publication('publication_failed', 'task_failed', '2026-08-27T01:30:00.000Z'));
     const collector: PublicationMetricsCollector = {
       collect: jest.fn().mockRejectedValue(new Error('X API rate limited')),
@@ -103,12 +103,12 @@ describe('ContentTrackingSchedulerService', () => {
         trackingFailureCount: 1,
       }),
     );
-    expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'published' }));
+    expect(repository.contentTasks[0]).toEqual(expect.objectContaining({ status: 'published' }));
   });
 
   it('completes expired tracking windows without collecting metrics', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push(task('task_expired'));
+    repository.contentTasks.push(task('task_expired'));
     repository.publicationRecords.push(publication('publication_expired', 'task_expired', '2026-08-20T03:30:00.000Z'));
     const collector: PublicationMetricsCollector = {
       collect: jest.fn(),
@@ -123,7 +123,7 @@ describe('ContentTrackingSchedulerService', () => {
 
     expect(collector.collect).not.toHaveBeenCalled();
     expect(repository.publicationRecords[0]).toEqual(expect.objectContaining({ trackingStatus: 'completed' }));
-    expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'completed' }));
+    expect(repository.contentTasks[0]).toEqual(expect.objectContaining({ status: 'completed' }));
   });
 });
 

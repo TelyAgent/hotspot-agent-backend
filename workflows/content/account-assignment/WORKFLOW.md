@@ -23,7 +23,7 @@ model: default_reasoning
 # 分配规则
 
 - 只处理输入中的已启用账号。
-- 账号角色与事件主体、行业、受众、表达方式或 Skill 场景明确匹配时，输出 `create_account_response_task`。
+- 账号角色与事件主体、行业、受众、表达方式或 Skill 场景明确匹配时，输出 `create_content_task`。
 - 弱相关但值得观察时，输出 `observe_account`。
 - 不相关、角色不适合、事件事实边界不足以支撑该账号表达时，输出 `skip_account`。
 - 不得给输入之外的账号创建任务。
@@ -33,7 +33,7 @@ model: default_reasoning
 
 只输出符合 `account_assignment_commands_v1` 的 JSON。
 
-`create_account_response_task.assignmentReason` 必须说明角色和事件为什么匹配。
+`create_content_task.assignmentReason` 必须说明角色和事件为什么匹配。
 
 `priority` 规则：
 

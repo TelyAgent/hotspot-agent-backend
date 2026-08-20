@@ -32,7 +32,7 @@ describe('OverviewService', () => {
         formedAt: '2026-08-19T00:00:00.000Z',
       },
     );
-    repository.accountResponseTasks.push(
+    repository.contentTasks.push(
       task('task_alpha_flash', 'event_alpha', 'account_flash', 'tracking', '2026-08-20T03:00:00.000Z'),
       task('task_alpha_product', 'event_alpha', 'account_product', 'ready_for_publish', '2026-08-20T02:00:00.000Z'),
       task('task_beta_flash', 'event_beta', 'account_flash', 'generation_failed', '2026-08-20T01:00:00.000Z'),

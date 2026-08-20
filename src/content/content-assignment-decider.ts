@@ -28,7 +28,7 @@ export interface ContentAssignmentDecider {
 const assignmentCommandSchema = z.discriminatedUnion('type', [
   z
     .object({
-      type: z.literal('create_account_response_task'),
+      type: z.literal('create_content_task'),
       idempotencyKey: z.string(),
       eventId: z.string(),
       accountId: z.string(),
@@ -123,7 +123,7 @@ export class WorkflowContentAssignmentDecider implements ContentAssignmentDecide
       return parsed.data.commands
         .filter((command) => accountIds.has(command.accountId))
         .map((command): ContentAssignmentDecision => {
-          if (command.type === 'create_account_response_task') {
+          if (command.type === 'create_content_task') {
             return {
               accountId: command.accountId,
               decision: 'participate',

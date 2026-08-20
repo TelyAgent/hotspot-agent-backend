@@ -8,7 +8,7 @@
 
 本设计与以下能力衔接：
 
-- 账号任务：`AccountResponseTask`
+- 账号任务：`ContentTask`
 - 发布记录：`PublicationRecord`
 - 发布指标：`PublicationMetric`
 - 账号配置：`OperationAccount`
@@ -85,10 +85,10 @@ firstPublishLatencyMs  Int?
 | 互动总量 | `PublicationMetric.likes/replies/reposts/quotes` 最新快照求和 | 不需要 |
 | 已发布内容 | `PublicationRecord.status = published` | 不需要 |
 | 账号表现 | `PublicationRecord + PublicationMetric + OperationAccount` | 不需要 |
-| 人工处理事项 | `AccountResponseTask.status/riskStatus` | 不需要 |
-| 任务组进度 | `AccountResponseTask` 按 `eventId` 聚合 | 不需要 |
+| 人工处理事项 | `ContentTask.status/riskStatus` | 不需要 |
+| 任务组进度 | `ContentTask` 按 `eventId` 聚合 | 不需要 |
 | 追踪异常 | `PublicationRecord.trackingStatus = tracking_error` | 不需要 |
-| 生成异常 | `AccountResponseTask.status = generation_failed/precheck_blocked` | 不需要 |
+| 生成异常 | `ContentTask.status = generation_failed/precheck_blocked` | 不需要 |
 
 ## 5. 平均首发用时口径
 
@@ -270,7 +270,7 @@ score = min(100, round(wellPerformingRate * 70 + log10(avgViews + 1) * 10))
 
 ### 7.5 人工处理事项
 
-来自 `AccountResponseTask` 当前状态。
+来自 `ContentTask` 当前状态。
 
 首版映射：
 
@@ -303,7 +303,7 @@ score = min(100, round(wellPerformingRate * 70 + log10(avgViews + 1) * 10))
 
 ### 7.7 任务组进度
 
-按 `AccountResponseTask.eventId` 聚合。
+按 `ContentTask.eventId` 聚合。
 
 `completedCount` 包含：
 

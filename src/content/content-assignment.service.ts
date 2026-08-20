@@ -46,8 +46,8 @@ export class ContentAssignmentService {
         workflowRunId: input.workflowRunId,
         workflowCommandId: `${input.workflowCommandId}:${account.id}`,
         command: {
-          type: 'create_account_response_task',
-          idempotencyKey: `account_response_task:${input.eventId}:${account.id}`,
+          type: 'create_content_task',
+          idempotencyKey: `content_task:${input.eventId}:${account.id}`,
           eventId: input.eventId,
           accountId: account.id,
           skill: stringField(account, 'skill') ?? account.key,
@@ -94,8 +94,8 @@ export class ContentAssignmentService {
             workflowRunId: input.workflowRunId,
             workflowCommandId: `${input.workflowCommandId}:${account.id}`,
             command: {
-              type: 'create_account_response_task',
-              idempotencyKey: `account_response_task:${input.eventId}:${account.id}`,
+              type: 'create_content_task',
+              idempotencyKey: `content_task:${input.eventId}:${account.id}`,
               eventId: input.eventId,
               accountId: account.id,
               skill: stringField(account, 'skill') ?? account.key,

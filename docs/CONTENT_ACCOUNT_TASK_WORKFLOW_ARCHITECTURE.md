@@ -86,7 +86,7 @@ Event 进入响应链路
 2. 加载启用的 `workflows/content/account-assignment` Markdown Workflow。
 3. 调用模型输出结构化分配命令。
 4. 校验命令只包含已启用账号。
-5. 为每个参与账号创建或复用 `account_response_task`。
+5. 为每个参与账号创建或复用 `content_task`。
 6. Event 状态保持或更新为 `responding`。
 7. 记录 Workflow Definition 和 Workflow Run 审计；如果 Workflow 不可用或输出不合法，后端使用关键词规则兜底，保证基础链路不中断。
 
@@ -167,7 +167,7 @@ interface AccountAssignmentContextV1 {
     observedAt: string;
   };
   accounts: OperationAccountForAssignment[];
-  existingTasks: ExistingAccountResponseTask[];
+  existingTasks: ExistingContentTask[];
 }
 
 interface OperationAccountForAssignment {
@@ -188,7 +188,7 @@ interface OperationAccountForAssignment {
   };
 }
 
-interface ExistingAccountResponseTask {
+interface ExistingContentTask {
   id: string;
   eventId: string;
   accountId: string;
@@ -212,12 +212,12 @@ interface AccountAssignmentCommandsV1 {
 }
 
 type AccountAssignmentCommand =
-  | CreateAccountTaskCommand
+  | CreateContentTaskCommand
   | ObserveAccountCommand
   | SkipAccountCommand;
 
-interface CreateAccountTaskCommand {
-  type: 'create_account_response_task';
+interface CreateContentTaskCommand {
+  type: 'create_content_task';
   idempotencyKey: string;
   eventId: string;
   accountId: string;
@@ -251,7 +251,7 @@ interface SkipAccountCommand {
 
 规则：
 
-- `responseMode = always` 的基础生产线默认输出 `create_account_response_task`，除非 Event 被标记为 `blocked` 或 `internal_only`。
+- `responseMode = always` 的基础生产线默认输出 `create_content_task`，除非 Event 被标记为 `blocked` 或 `internal_only`。
 - `responseMode = workflow_decision` 的人设账号必须按角色定义判断参与、观察或跳过。
 - `responseMode = manual_only` 不自动创建任务，只能人工指派。
 - Workflow 不得给未启用账号创建任务。
@@ -344,7 +344,7 @@ interface GeneratedContentCandidate {
 当前已有 `OperationAccount`，但缺少账号响应任务和候选版本表。建议新增：
 
 ```prisma
-model AccountResponseTask {
+model ContentTask {
   id                     String   @id
   eventId                String
   accountId              String
@@ -362,7 +362,7 @@ model AccountResponseTask {
 
   @@unique([eventId, accountId])
   @@index([status, priority, createdAt])
-  @@map("account_response_task")
+  @@map("content_task")
 }
 
 model ContentCandidateBatch {
@@ -554,13 +554,13 @@ POST /content/tasks/:id/abandon
 
 新增命令类型：
 
-- `create_account_response_task`
+- `create_content_task`
 - `observe_account`
 - `skip_account`
 
 执行要求：
 
-- `create_account_response_task` 使用 `eventId + accountId` 幂等。
+- `create_content_task` 使用 `eventId + accountId` 幂等。
 - 已存在任务时记录 command execution 为 `skipped`，并返回已有任务 ID。
 - 账号禁用、账号不存在或 Event 不存在时记录失败，不影响其他命令。
 - `observe_account` 和 `skip_account` 写入审计表或任务分配日志，方便复盘为什么某账号没有参与。
@@ -630,7 +630,7 @@ interface EventContextPackV1 {
 ## 15. 实施顺序
 
 1. 更新平台规则 SPEC 中内容生成合同：从“触发后生成 3 条候选”改为“触发后创建账号任务，任务详情页按需生成候选”。
-2. 新增 `AccountResponseTask`、`ContentCandidateBatch`、`ContentCandidate`、`PublicationRecord`、`PublicationMetric` 数据模型。
+2. 新增 `ContentTask`、`ContentCandidateBatch`、`ContentCandidate`、`PublicationRecord`、`PublicationMetric` 数据模型。
 3. 实现 Event Context Pack Builder。
 4. 实现 Account Assignment Workflow、schema、validator 和 context builder。
 5. 实现 Content Command Executor 并接入 Event 创建后的响应链路。

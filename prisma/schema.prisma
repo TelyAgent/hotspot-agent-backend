@@ -53,7 +53,7 @@ model OperationAccount {
   @@map("operation_account")
 }
 
-model AccountResponseTask {
+model ContentTask {
   id                     String   @id
   eventId                String
   accountId              String
@@ -73,7 +73,7 @@ model AccountResponseTask {
   @@index([status, priority, createdAt])
   @@index([eventId])
   @@index([accountId])
-  @@map("account_response_task")
+  @@map("content_task")
 }
 
 model ContentCandidateBatch {

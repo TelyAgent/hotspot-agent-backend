@@ -17,7 +17,7 @@
             "additionalProperties": false,
             "required": ["type", "idempotencyKey", "eventId", "accountId", "skill", "skillVersion", "assignmentReason", "priority", "source"],
             "properties": {
-              "type": { "type": "string", "const": "create_account_response_task" },
+              "type": { "type": "string", "const": "create_content_task" },
               "idempotencyKey": { "type": "string" },
               "eventId": { "type": "string" },
               "accountId": { "type": "string" },

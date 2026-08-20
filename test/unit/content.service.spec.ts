@@ -5,9 +5,9 @@ import { ContentCandidateGenerator } from '../../src/content/content-candidate-g
 import { ContentRiskPrechecker } from '../../src/content/content-risk-prechecker';
 
 describe('ContentService', () => {
-  it('lists account response tasks with candidate counts', async () => {
+  it('lists content tasks with candidate counts', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push({
+    repository.contentTasks.push({
       id: 'task_1',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -70,7 +70,7 @@ describe('ContentService', () => {
 
   it('returns task detail with batches and candidates', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push({
+    repository.contentTasks.push({
       id: 'task_1',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -175,7 +175,7 @@ describe('ContentService', () => {
 
   it('generates a candidate batch and prechecks three candidates when requested from task detail', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push({
+    repository.contentTasks.push({
       id: 'task_1',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -303,7 +303,7 @@ describe('ContentService', () => {
       }),
     ]);
     expect(repository.contentCandidates).toHaveLength(3);
-    expect(repository.accountResponseTasks[0]).toEqual(
+    expect(repository.contentTasks[0]).toEqual(
       expect.objectContaining({
         status: 'ready_for_publish',
         riskStatus: 'high',
@@ -314,7 +314,7 @@ describe('ContentService', () => {
 
   it('publishes a specified available candidate and rejects blocked candidates', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push({
+    repository.contentTasks.push({
       id: 'task_1',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -402,7 +402,7 @@ describe('ContentService', () => {
         firstPublishLatencyMs: 30 * 60 * 1000,
       }),
     );
-    expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'published' }));
+    expect(repository.contentTasks[0]).toEqual(expect.objectContaining({ status: 'published' }));
     await expect(
       service.publishTask('task_1', {
         candidateId: 'candidate_available',
@@ -413,7 +413,7 @@ describe('ContentService', () => {
 
   it('records publication metrics and completes tracking', async () => {
     const repository = new InMemoryContentRepository();
-    repository.accountResponseTasks.push({
+    repository.contentTasks.push({
       id: 'task_1',
       eventId: 'event_1',
       accountId: 'account_flash',
@@ -464,7 +464,7 @@ describe('ContentService', () => {
         capturedAt: '2026-08-20T03:30:00.000Z',
       }),
     );
-    expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'tracking' }));
+    expect(repository.contentTasks[0]).toEqual(expect.objectContaining({ status: 'tracking' }));
     expect(repository.publicationRecords[0]).toEqual(
       expect.objectContaining({
         wellPerforming: true,
@@ -482,6 +482,6 @@ describe('ContentService', () => {
         trackingStatus: 'completed',
       }),
     );
-    expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'completed' }));
+    expect(repository.contentTasks[0]).toEqual(expect.objectContaining({ status: 'completed' }));
   });
 });

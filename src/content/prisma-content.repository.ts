@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  AccountResponseTaskRecord,
+  ContentTaskRecord,
   ContentCommandExecutionRecord,
   ContentCandidateBatchRecord,
   ContentCandidateRecord,
@@ -14,7 +14,7 @@ import {
   PublicationMetricRecord,
   PublicationRecord,
 } from './content.types';
-import { ContentRepository, CreateAccountResponseTaskInput } from './content.repository';
+import { ContentRepository, CreateContentTaskInput } from './content.repository';
 
 @Injectable()
 export class PrismaContentRepository implements ContentRepository {
@@ -47,8 +47,8 @@ export class PrismaContentRepository implements ContentRepository {
     return mapContentCommandExecution(saved);
   }
 
-  async findAccountResponseTaskByEventAndAccount(eventId: string, accountId: string) {
-    const task = await this.contentDelegate('accountResponseTask').findUnique({
+  async findContentTaskByEventAndAccount(eventId: string, accountId: string) {
+    const task = await this.contentDelegate('contentTask').findUnique({
       where: {
         eventId_accountId: {
           eventId,
@@ -56,11 +56,11 @@ export class PrismaContentRepository implements ContentRepository {
         },
       },
     });
-    return task ? mapAccountResponseTask(task) : undefined;
+    return task ? mapContentTask(task) : undefined;
   }
 
-  async createAccountResponseTask(input: CreateAccountResponseTaskInput) {
-    const task = await this.contentDelegate('accountResponseTask').create({
+  async createContentTask(input: CreateContentTaskInput) {
+    const task = await this.contentDelegate('contentTask').create({
       data: {
         id: input.id,
         eventId: input.eventId,
@@ -77,11 +77,11 @@ export class PrismaContentRepository implements ContentRepository {
         updatedAt: new Date(input.updatedAt),
       },
     });
-    return mapAccountResponseTask(task);
+    return mapContentTask(task);
   }
 
-  async updateAccountResponseTask(id: string, patch: Parameters<ContentRepository['updateAccountResponseTask']>[1]) {
-    const task = await this.contentDelegate('accountResponseTask').update({
+  async updateContentTask(id: string, patch: Parameters<ContentRepository['updateContentTask']>[1]) {
+    const task = await this.contentDelegate('contentTask').update({
       where: { id },
       data: {
         status: patch.status,
@@ -90,19 +90,19 @@ export class PrismaContentRepository implements ContentRepository {
         updatedAt: patch.updatedAt ? new Date(patch.updatedAt) : undefined,
       },
     });
-    return mapAccountResponseTask(task);
+    return mapContentTask(task);
   }
 
-  async listAccountResponseTasks() {
-    const tasks = await this.contentDelegate('accountResponseTask').findMany({
+  async listContentTasks() {
+    const tasks = await this.contentDelegate('contentTask').findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return tasks.map(mapAccountResponseTask);
+    return tasks.map(mapContentTask);
   }
 
-  async findAccountResponseTaskById(id: string) {
-    const task = await this.contentDelegate('accountResponseTask').findUnique({ where: { id } });
-    return task ? mapAccountResponseTask(task) : undefined;
+  async findContentTaskById(id: string) {
+    const task = await this.contentDelegate('contentTask').findUnique({ where: { id } });
+    return task ? mapContentTask(task) : undefined;
   }
 
   async listOperationAccounts() {
@@ -326,7 +326,7 @@ export class PrismaContentRepository implements ContentRepository {
   }
 }
 
-function mapAccountResponseTask(task: unknown): AccountResponseTaskRecord {
+function mapContentTask(task: unknown): ContentTaskRecord {
   const row = task as {
     id: string;
     eventId: string;
@@ -349,8 +349,8 @@ function mapAccountResponseTask(task: unknown): AccountResponseTaskRecord {
     accountId: row.accountId,
     workflowRunId: row.workflowRunId ?? undefined,
     assignmentCommandId: row.assignmentCommandId ?? undefined,
-    status: row.status as AccountResponseTaskRecord['status'],
-    priority: row.priority as AccountResponseTaskRecord['priority'],
+    status: row.status as ContentTaskRecord['status'],
+    priority: row.priority as ContentTaskRecord['priority'],
     skill: row.skill,
     skillVersion: row.skillVersion,
     assignmentReason: row.assignmentReason,

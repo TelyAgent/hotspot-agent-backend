@@ -20,7 +20,7 @@ model: default_reasoning
 - `generationKind`：首次生成、整批重生成或基于已选候选修改。
 - `task`：任务绑定的 Event、账号和 Skill 版本。
 - `eventContextPack`：事件事实边界。
-- `account`：运营账号角色定义和 Skill 信息。
+- `account`：运营账号角色定义、Skill 信息和内容生成规则。重点读取 `account.fields.personaType` 与 `account.fields.contentPromptRule`。
 - `existingCandidates`：历史候选。
 - `userInstruction`：运营人员本次补充要求。
 
@@ -28,7 +28,7 @@ model: default_reasoning
 
 - 正常输出必须正好 3 条候选。
 - 候选必须遵守 Event Context Pack，不得把未确认事实写成确定事实。
-- 候选必须符合账号角色定义和 Skill 语气，不要写成通用营销文案。
+- 候选必须符合账号角色定义、Skill 语气和 `contentPromptRule`，不要写成通用营销文案。
 - 引用或回复必须有真实 `targetPostUrl`；无法确认目标帖时使用原创。
 - 用户指令不能覆盖事实边界、风险边界或账号角色。
 - 如果不适合生成，使用 `refusal` 说明原因；正常生成时不要输出 `refusal`。

@@ -59,7 +59,7 @@ describe('ContentAssignmentService', () => {
         },
       ],
     });
-    expect(repository.accountResponseTasks).toEqual([
+    expect(repository.contentTasks).toEqual([
       expect.objectContaining({
         eventId: 'event_1',
         accountId: 'operation_account_flash',
@@ -133,7 +133,7 @@ describe('ContentAssignmentService', () => {
       }),
     );
     expect(result).toEqual({ createdOrReused: 1, skippedAccounts: [] });
-    expect(repository.accountResponseTasks).toEqual([
+    expect(repository.contentTasks).toEqual([
       expect.objectContaining({
         eventId: 'event_1',
         accountId: 'operation_account_unusual_whales',

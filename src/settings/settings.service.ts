@@ -105,17 +105,18 @@ export class SettingsService implements OnModuleInit {
         continue;
       }
 
-      const existingFields =
-        existing.fields && typeof existing.fields === 'object' && !Array.isArray(existing.fields)
-          ? (existing.fields as Record<string, unknown>)
-          : {};
-      const mergedFields = { ...defaultFields, ...existingFields };
+      const existingFields = this.objectFields(existing.fields);
+      const mergedFields = this.mergeDefaultFields(defaultFields, existingFields, account);
+      const description = this.shouldUpgradeDefaultText(existing.description, this.legacyPersonaType(account))
+        ? account.description
+        : undefined;
 
-      if (Object.keys(mergedFields).some((key) => existingFields[key] === undefined)) {
+      if (description !== undefined || this.hasFieldChanges(existingFields, mergedFields)) {
         await this.prisma.operationAccount.update({
           where: { id: existing.id },
           data: {
-            fields: mergedFields,
+            description,
+            fields: mergedFields as Prisma.InputJsonValue,
           },
         });
       }
@@ -127,11 +128,44 @@ export class SettingsService implements OnModuleInit {
       xAccountId: account.xAccountId,
       type: account.type,
       personaType: account.personaType,
+      contentPromptRule: account.contentPromptRule,
       skill: account.skill,
       scenario: account.description,
       frequency: '按 Event 路由与账号容量控制',
       onFailure: '保留任务并上报异常',
     };
+  }
+
+  private objectFields(fields: unknown) {
+    return fields && typeof fields === 'object' && !Array.isArray(fields) ? (fields as Record<string, unknown>) : {};
+  }
+
+  private mergeDefaultFields(
+    defaultFields: Record<string, unknown>,
+    existingFields: Record<string, unknown>,
+    account: (typeof DEFAULT_CONTENT_ACCOUNT_SETTINGS)[number],
+  ) {
+    const mergedFields = { ...defaultFields, ...existingFields };
+    const legacyPersonaType = this.legacyPersonaType(account);
+    if (this.shouldUpgradeDefaultText(existingFields.personaType, legacyPersonaType)) {
+      mergedFields.personaType = account.personaType;
+    }
+    if (this.shouldUpgradeDefaultText(existingFields.scenario, legacyPersonaType)) {
+      mergedFields.scenario = account.description;
+    }
+    return mergedFields;
+  }
+
+  private legacyPersonaType(account: (typeof DEFAULT_CONTENT_ACCOUNT_SETTINGS)[number]) {
+    return 'legacyPersonaType' in account ? account.legacyPersonaType : undefined;
+  }
+
+  private shouldUpgradeDefaultText(value: unknown, legacyValue: string | undefined) {
+    return Boolean(legacyValue && value === legacyValue);
+  }
+
+  private hasFieldChanges(existingFields: Record<string, unknown>, mergedFields: Record<string, unknown>) {
+    return Object.keys(mergedFields).some((key) => existingFields[key] !== mergedFields[key]);
   }
 
   private toDto(item: {

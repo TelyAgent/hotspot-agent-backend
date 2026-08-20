@@ -1,7 +1,7 @@
 export type MaybePromise<T> = T | Promise<T>;
 
 export type ContentCommandExecutionStatus = 'success' | 'skipped' | 'failed';
-export type AccountResponseTaskStatus =
+export type ContentTaskStatus =
   | 'ready_for_generation'
   | 'generating'
   | 'generation_failed'
@@ -47,13 +47,13 @@ export interface EventTimingRecord {
   formedAt: string;
 }
 
-export interface AccountResponseTaskRecord {
+export interface ContentTaskRecord {
   id: string;
   eventId: string;
   accountId: string;
   workflowRunId?: string;
   assignmentCommandId?: string;
-  status: AccountResponseTaskStatus;
+  status: ContentTaskStatus;
   priority: ContentTaskPriority;
   skill: string;
   skillVersion: string;
@@ -76,10 +76,10 @@ export interface ContentCommandExecutionRecord {
   createdAt: string;
 }
 
-export type ContentCommand = CreateAccountResponseTaskCommand | ObserveAccountCommand | SkipAccountCommand;
+export type ContentCommand = CreateContentTaskCommand | ObserveAccountCommand | SkipAccountCommand;
 
-export interface CreateAccountResponseTaskCommand {
-  type: 'create_account_response_task';
+export interface CreateContentTaskCommand {
+  type: 'create_content_task';
   idempotencyKey: string;
   eventId: string;
   accountId: string;

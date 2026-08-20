@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CONTENT_REPOSITORY } from '../content/content.tokens';
 import { ContentRepository } from '../content/content.repository';
-import { AccountResponseTaskRecord, PublicationMetricRecord, PublicationRecord } from '../content/content.types';
+import { ContentTaskRecord, PublicationMetricRecord, PublicationRecord } from '../content/content.types';
 
 export type OverviewRange = '7d' | '30d' | '1y';
 
@@ -65,7 +65,7 @@ export class OverviewService {
       this.contentRepository.listPublicationRecords(),
       this.contentRepository.listPublicationMetrics(),
       this.contentRepository.listOperationAccounts(),
-      this.contentRepository.listAccountResponseTasks(),
+      this.contentRepository.listContentTasks(),
     ]);
     const rangeStart = new Date(new Date(now).getTime() - rangeToMs(normalizedRange)).getTime();
     const scopedPublications = publications.filter((publication) => {
@@ -86,7 +86,7 @@ export class OverviewService {
     };
   }
 
-  private async eventTitles(tasks: AccountResponseTaskRecord[]) {
+  private async eventTitles(tasks: ContentTaskRecord[]) {
     const eventIds = Array.from(new Set(tasks.map((task) => task.eventId)));
     const pairs = await Promise.all(
       eventIds.map(async (eventId) => {
@@ -178,7 +178,7 @@ function buildAccountPerformance(
     .slice(0, 5);
 }
 
-function buildManualItems(tasks: AccountResponseTaskRecord[], eventTitleById: Map<string, string>) {
+function buildManualItems(tasks: ContentTaskRecord[], eventTitleById: Map<string, string>) {
   return tasks
     .map((task) => manualItem(task, eventTitleById.get(task.eventId) ?? task.eventId))
     .filter((item): item is NonNullable<ReturnType<typeof manualItem>> => Boolean(item))
@@ -186,7 +186,7 @@ function buildManualItems(tasks: AccountResponseTaskRecord[], eventTitleById: Ma
     .slice(0, 5);
 }
 
-function manualItem(task: AccountResponseTaskRecord, eventTitle: string) {
+function manualItem(task: ContentTaskRecord, eventTitle: string) {
   if (task.status === 'generation_failed') {
     return {
       severity: 'critical' as const,
@@ -230,7 +230,7 @@ function manualItem(task: AccountResponseTaskRecord, eventTitle: string) {
   return undefined;
 }
 
-function buildAnomalies(tasks: AccountResponseTaskRecord[], publications: PublicationRecord[]) {
+function buildAnomalies(tasks: ContentTaskRecord[], publications: PublicationRecord[]) {
   const anomalies = [
     {
       severity: 'critical' as const,
@@ -257,8 +257,8 @@ function buildAnomalies(tasks: AccountResponseTaskRecord[], publications: Public
   return anomalies.filter((anomaly) => anomaly.count > 0);
 }
 
-function buildTaskGroups(tasks: AccountResponseTaskRecord[], eventTitleById: Map<string, string>) {
-  const groups = new Map<string, AccountResponseTaskRecord[]>();
+function buildTaskGroups(tasks: ContentTaskRecord[], eventTitleById: Map<string, string>) {
+  const groups = new Map<string, ContentTaskRecord[]>();
   for (const task of tasks) {
     groups.set(task.eventId, [...(groups.get(task.eventId) ?? []), task]);
   }
@@ -318,7 +318,7 @@ function performanceScore(wellPerformingRate: number, avgViews?: number) {
   return Math.min(100, Math.round(wellPerformingRate * 70 + Math.log10((avgViews ?? 0) + 1) * 10));
 }
 
-function isCompletedTaskStatus(status: AccountResponseTaskRecord['status']) {
+function isCompletedTaskStatus(status: ContentTaskRecord['status']) {
   return status === 'published' || status === 'tracking' || status === 'completed' || status === 'abandoned';
 }
 

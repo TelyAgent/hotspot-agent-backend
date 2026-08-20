@@ -1,7 +1,7 @@
 import { PrismaContentRepository } from '../../src/content/prisma-content.repository';
 
 describe('PrismaContentRepository', () => {
-  it('finds account response tasks by event and account using the compound unique key', async () => {
+  it('finds content tasks by event and account using the compound unique key', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'task_1',
       eventId: 'event_1',
@@ -19,10 +19,10 @@ describe('PrismaContentRepository', () => {
       updatedAt: new Date('2026-08-20T01:00:00.000Z'),
     });
     const repository = new PrismaContentRepository({
-      accountResponseTask: { findUnique },
+      contentTask: { findUnique },
     } as never);
 
-    const task = await repository.findAccountResponseTaskByEventAndAccount('event_1', 'account_flash');
+    const task = await repository.findContentTaskByEventAndAccount('event_1', 'account_flash');
 
     expect(findUnique).toHaveBeenCalledWith({
       where: {
@@ -47,7 +47,7 @@ describe('PrismaContentRepository', () => {
     });
   });
 
-  it('creates account response tasks and maps optional ids when present', async () => {
+  it('creates content tasks and maps optional ids when present', async () => {
     const create = jest.fn().mockResolvedValue({
       id: 'task_2',
       eventId: 'event_2',
@@ -65,10 +65,10 @@ describe('PrismaContentRepository', () => {
       updatedAt: new Date('2026-08-20T02:00:00.000Z'),
     });
     const repository = new PrismaContentRepository({
-      accountResponseTask: { create },
+      contentTask: { create },
     } as never);
 
-    const task = await repository.createAccountResponseTask({
+    const task = await repository.createContentTask({
       id: 'task_2',
       eventId: 'event_2',
       accountId: 'account_deep',
