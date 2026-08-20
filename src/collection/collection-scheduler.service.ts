@@ -6,6 +6,7 @@ import { CollectionJobConfig } from './collection.types';
 import { TwitterCollectionService } from './twitter-collection.service';
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const STALE_RUNNING_FETCH_RUN_MS = 6 * 60 * 60 * 1000;
 
 @Injectable()
 export class CollectionSchedulerService {
@@ -20,6 +21,7 @@ export class CollectionSchedulerService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCronTick() {
+    await this.markStaleRunningFetchRuns();
     const jobs = await this.repository.listJobConfigs('x');
     for (const job of jobs.filter((candidate) => candidate.enabled)) {
       if (!this.resolveIntervalMs(job)) {
@@ -30,6 +32,23 @@ export class CollectionSchedulerService {
         this.logger.log(`Collection job ${job.id} is due, start running`);
         await this.runJob(job.id);
       }
+    }
+  }
+
+  private async markStaleRunningFetchRuns() {
+    if (!this.repository.markStaleRunningFetchRunsFailed) {
+      return;
+    }
+
+    const now = new Date();
+    const markedCount = await this.repository.markStaleRunningFetchRunsFailed({
+      platform: 'x',
+      olderThan: new Date(now.getTime() - STALE_RUNNING_FETCH_RUN_MS).toISOString(),
+      finishedAt: now.toISOString(),
+      error: 'stale_running_fetch_run_timeout',
+    });
+    if (markedCount > 0) {
+      this.logger.warn(`Marked ${markedCount} stale running X collection fetch run(s) as failed`);
     }
   }
 

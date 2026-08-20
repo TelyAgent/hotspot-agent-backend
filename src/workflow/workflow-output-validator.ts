@@ -28,7 +28,6 @@ const xTrendSourceContextSchema = z
           rank: z.number().int().optional(),
           previousRank: z.number().int().optional(),
           snapshotId: z.string(),
-          representativePosts: z.array(evidenceRecordSchema),
         })
         .strict(),
     ),

@@ -7,7 +7,7 @@
 服务端只提供稳定运行时：
 
 ```text
-采集快照
+采集 Top 30 热搜快照
   -> 构建 Workflow Context
   -> 加载 Markdown Workflow
   -> 调用 LLM 执行业务规则
@@ -40,8 +40,8 @@
 
 | 层 | 负责 | 不负责 |
 | --- | --- | --- |
-| 数据采集层 | 调 Twitter/X API，保存快照、快照条目、diff、signal | 判断是否形成 Event |
-| Context Builder | 从数据库取成功快照、相邻快照、重点主题配置、历史 Event 候选，组装输入 | 执行业务规则 |
+| 数据采集层 | 调 Twitter/X API，按地区保存 Top 30 快照、快照条目、diff、signal | 判断是否形成 Event；为每条热搜提前抓代表帖 |
+| Context Builder | 从数据库取当前成功快照、diff、重点主题配置、历史 Event 候选，组装输入 | 执行业务规则；读取代表帖子文本 |
 | Markdown Workflow | 定义规则、语义判断、Event Intake 生成、命令选择 | 直接写数据库、绕过 Schema |
 | LLM Runtime | 按 Workflow 和 Context 输出结构化 JSON | 自行读取数据库 |
 | Schema Validator | 校验输出字段、命令类型、必填项、幂等键 | 判断业务是否正确 |
@@ -63,7 +63,7 @@
 - 新增 `TR-05：同一 Event 连续两小时在 Top 10`。
 - 删除某条触发规则。
 - 修改重点主题正例、反例、关键词解释。
-- 修改代表帖子证明边界。
+- 修改事件形成阶段对热搜榜证据边界的解释。
 - 修改 T0 的业务定义。
 - 修改“首次命中启动响应、后续命中只更新上下文”的判断口径。
 
@@ -72,7 +72,7 @@
 只有这些属于平台能力变化：
 
 - Workflow 需要的输入字段当前 Context 没有，例如账号粉丝数、帖子作者可信度、外部新闻证据。
-- Workflow 需要新的外部数据能力，例如 YouTube 搜索、新闻正文抓取、X 代表帖子获取。
+- Workflow 需要新的外部数据能力，例如 YouTube 搜索、新闻正文抓取；X 代表帖子获取属于事件形成后的证据增强链路。
 - Workflow 需要新的命令类型，例如 `merge_event`、`split_event`、`pause_content_tasks`。
 - Event 存储模型无法表达新业务对象。
 - 权限、审计或人工审批状态需要新增系统能力。
@@ -165,7 +165,7 @@ interface XTrendEventContextV1 {
   }
 
   previousSuccessfulSnapshots: {
-    byRegion: Record<string, TrendRegionSnapshot | null>
+    byRegion: Record<string, null>
   }
 
   snapshotDiffs: TrendSnapshotDiff[]
@@ -204,7 +204,7 @@ interface TrendSnapshotItem {
 ```ts
 interface TrendSnapshotDiff {
   region: string
-  currentSnapshotId: string
+ currentSnapshotId: string
   previousSnapshotId?: string
   entered: DiffItem[]
   exited: DiffItem[]
@@ -346,21 +346,21 @@ SPEC 中的首期规则应写在 Workflow 文档中，而不是服务端代码�
 四条路径均不等待人工是否参与。
 T0 记录系统首次成功发现合格触发的时间。
 
-每个出现地区使用 X 默认热门排序，获取实际可取得的最多 3 条代表帖子。
-代表帖子证明 X 上正在传播的说法，不当然证明现实事实为真。
+事件形成阶段只消费热搜榜快照和 diff，不消费代表帖子。
+热搜榜证明的是榜单出现、排名变化和跨地区出现，不当然证明现实事实为真。
 ```
 
 未来规则调整只改这一段和示例。
 
-## 9. 代表帖子获取策略
+## 9. 事件形成后的证据增强策略
 
-代表帖子是 Workflow 判断后的补充证据。建议分两阶段：
+代表帖子是 Event 已形成后的补充证据，不参与热搜榜形成 Event 的第一判断。建议分两阶段：
 
-1. Workflow 先根据榜单快照决定候选 Event 和出现地区。
-2. Runtime 对命中的地区调用 `x.searchPosts` 或 `x.getRepresentativePosts` 获取最多 3 条代表帖子。
-3. Runtime 把代表帖子追加给 Workflow 二次确认，或直接交给 Event Intake 生成 Workflow。
+1. Event Formation Workflow 先根据当前榜单、snapshot diff、重点主题配置和已有 Event 摘要决定 create、update 或 ignore。
+2. Event 创建或更新成功后，证据增强链路再按 Event 标题、normalized key、query 或关联热搜项调用 `x.searchPosts` 或其他外部证据工具。
+3. 证据增强结果写入 `event_evidence` 和 `event_source_context`，失败时记录错误，不回滚已形成 Event。
 
-为了保持规则可变，服务端只提供通用能力：
+为了保持规则可变，证据增强层只提供通用能力：
 
 ```ts
 getRepresentativePosts({
@@ -371,7 +371,7 @@ getRepresentativePosts({
 })
 ```
 
-`limit = 3` 是 Workflow 参数，不是服务端常量。
+代表帖子数量属于证据增强规则，不属于热搜事件形成规则。
 
 ## 10. 幂等与重复触发
 

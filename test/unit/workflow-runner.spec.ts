@@ -79,7 +79,7 @@ describe('WorkflowRunner', () => {
             observedAt: '2026-08-18T02:05:00.000Z',
           },
           sourceContext: {
-            regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new', representativePosts: [] }],
+            regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new' }],
           },
           evidenceRecords: [{ sourceType: 'x_trend', claim: 'AI is #4 in United States trends' }],
           startResponsePipeline: true,

@@ -368,8 +368,7 @@
         "region",
         "rank",
         "previousRank",
-        "snapshotId",
-        "representativePosts"
+        "snapshotId"
       ],
       "properties": {
         "region": {
@@ -383,12 +382,6 @@
         },
         "snapshotId": {
           "type": "string"
-        },
-        "representativePosts": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceRecord"
-          }
         }
       }
     },

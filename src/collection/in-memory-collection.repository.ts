@@ -106,6 +106,23 @@ export class InMemoryCollectionRepository implements CollectionRepository {
     return existing;
   }
 
+  markStaleRunningFetchRunsFailed(input: {
+    platform: string;
+    olderThan: string;
+    finishedAt: string;
+    error: string;
+  }): number {
+    const staleRuns = this.fetchRuns.filter(
+      (run) => run.platform === input.platform && run.status === 'running' && run.startedAt < input.olderThan,
+    );
+    staleRuns.forEach((run) => {
+      run.status = 'failed';
+      run.finishedAt = input.finishedAt;
+      run.error = input.error;
+    });
+    return staleRuns.length;
+  }
+
   saveXTrendSnapshot(snapshot: XTrendSnapshot): XTrendSnapshot {
     this.xTrendSnapshots.push(snapshot);
     return snapshot;

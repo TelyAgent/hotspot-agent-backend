@@ -111,7 +111,7 @@ export function createDefaultCollectionState(): CollectionState {
           topicConfigs: DEFAULT_TOPIC_CONFIGS,
           trendCollectionCron: '0 */2 * * *',
           trendEventWorkflowId: 'x-trend-event-formation',
-          defaultTrendLimit: 50,
+          defaultTrendLimit: 30,
           defaultPostLimit: 3,
         },
       },
@@ -156,11 +156,12 @@ export function mergePlatformCollectionConfigDefaults(
   return {
     ...existing,
     defaultRegions,
-    variables: {
-      ...defaults.variables,
-      ...existing.variables,
-      regions: variableRegions,
-      regionWoeids: {
+      variables: {
+        ...defaults.variables,
+        ...existing.variables,
+        defaultTrendLimit: defaults.variables.defaultTrendLimit,
+        regions: variableRegions,
+        regionWoeids: {
         ...(defaults.variables.regionWoeids ?? {}),
         ...(existing.variables.regionWoeids ?? {}),
       },

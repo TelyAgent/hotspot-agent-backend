@@ -37,6 +37,12 @@ export interface CollectionRepository {
   }): MaybePromise<SourceFetchRun | undefined>;
   saveFetchRun(fetchRun: SourceFetchRun): MaybePromise<SourceFetchRun>;
   updateFetchRun(id: string, patch: Partial<SourceFetchRun>): MaybePromise<SourceFetchRun>;
+  markStaleRunningFetchRunsFailed?(input: {
+    platform: string;
+    olderThan: string;
+    finishedAt: string;
+    error: string;
+  }): MaybePromise<number>;
   saveXTrendSnapshot(snapshot: XTrendSnapshot): MaybePromise<XTrendSnapshot>;
   saveXTrendSnapshotItems(items: XTrendSnapshotItem[]): MaybePromise<XTrendSnapshotItem[]>;
   saveSourceSnapshot(snapshot: SourceSnapshot): MaybePromise<SourceSnapshot>;

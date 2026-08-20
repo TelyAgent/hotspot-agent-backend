@@ -44,7 +44,7 @@ describe('EventCommandExecutor', () => {
         observedAt: '2026-08-18T02:05:00.000Z',
       },
       sourceContext: {
-        regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new', representativePosts: [] }],
+        regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new' }],
         matchedRules: [
           {
             ruleId: 'TR-01',
@@ -182,7 +182,7 @@ describe('EventCommandExecutor', () => {
       idempotencyKey: 'update:event_existing:tr04',
       targetEventId: 'event_existing',
       reason: 'Appeared in another region',
-      sourceContextPatch: { regions: [{ region: 'Japan', rank: 7, snapshotId: 'snapshot_jp_new', representativePosts: [] }] },
+      sourceContextPatch: { regions: [{ region: 'Japan', rank: 7, snapshotId: 'snapshot_jp_new' }] },
       evidenceRecords: [{ sourceType: 'x_trend', claim: 'AI ranked #7 on Japan trends' }],
       startResponsePipeline: false,
     };
@@ -223,7 +223,7 @@ describe('EventCommandExecutor', () => {
       idempotencyKey: 'update:baleba:tr02',
       targetEventId: 'baleba',
       reason: 'Model used normalized key as target.',
-      sourceContextPatch: { regions: [{ region: 'global', rank: 2, snapshotId: 'snapshot_global_new', representativePosts: [] }] },
+      sourceContextPatch: { regions: [{ region: 'global', rank: 2, snapshotId: 'snapshot_global_new' }] },
       evidenceRecords: [],
       startResponsePipeline: false,
     };

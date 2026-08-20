@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { COLLECTION_REPOSITORY } from '../collection/collection.tokens';
 import { CollectionRepository } from '../collection/collection.repository';
-import { Signal, SourceSnapshot, SourceSnapshotItem, SourceType } from '../collection/collection.types';
+import { SourceSnapshot, SourceSnapshotItem, SourceType } from '../collection/collection.types';
 import { TrendRegionSnapshotContext, XTrendEventContextV1 } from './workflow.types';
 
 export interface BuildXTrendContextInput {
@@ -27,20 +27,7 @@ export class XTrendContextBuilder {
     const successfulRegions = await Promise.all(
       latestSnapshots.map((snapshot) => this.toRegionSnapshotContext(snapshot)),
     );
-    const previousByRegionEntries = await Promise.all(
-      latestSnapshots.map(async (snapshot) => {
-        const previous = await this.collectionRepository.findPreviousSourceSnapshot({
-          platform: input.platform,
-          sourceType: input.sourceType,
-          region: snapshot.region,
-          before: snapshot.collectedAt,
-        });
-        return [
-          snapshot.region,
-          previous ? await this.toRegionSnapshotContext(previous) : null,
-        ] as const;
-      }),
-    );
+    const previousByRegion = Object.fromEntries(latestSnapshots.map((snapshot) => [snapshot.region, null]));
 
     return {
       schemaVersion: 'x_trend_event_context_v1',
@@ -53,11 +40,8 @@ export class XTrendContextBuilder {
         failedRegions: this.resolveMissingRegions(input.regions, latestSnapshots, input.observedAt),
       },
       previousSuccessfulSnapshots: {
-        byRegion: Object.fromEntries(previousByRegionEntries),
+        byRegion: previousByRegion,
       },
-      snapshotDiffs: await this.collectionRepository.findSourceSnapshotDiffs({
-        currentSnapshotIds: latestSnapshotIds,
-      }),
       configuredTopics: (platformConfig?.variables.topicConfigs ?? [])
         .filter((topic) => topic.enabled)
         .map((topic) => ({
@@ -70,41 +54,30 @@ export class XTrendContextBuilder {
         })),
       eventCandidates: [],
       recentEventHistory: [],
+      snapshotDiffs: await this.collectionRepository.findSourceSnapshotDiffs({
+        currentSnapshotIds: latestSnapshotIds,
+      }),
     };
   }
 
   private async toRegionSnapshotContext(snapshot: SourceSnapshot): Promise<TrendRegionSnapshotContext> {
     const items = await this.collectionRepository.findSourceSnapshotItems(snapshot.id);
-    const postSignals = await this.collectionRepository.findSignals({
-      platform: snapshot.platform,
-      sourceType: 'post',
-      snapshotIds: [snapshot.id],
-    });
     return {
       region: snapshot.region,
       snapshotId: snapshot.id,
       collectedAt: snapshot.collectedAt,
-      items: items.map((item) => this.toTrendSnapshotItemContext(item, postSignals)),
+      items: items
+        .slice()
+        .sort((left, right) => left.rank - right.rank)
+        .map((item) => this.toTrendSnapshotItemContext(item)),
     };
   }
 
-  private toTrendSnapshotItemContext(item: SourceSnapshotItem, postSignals: Signal[]) {
-    const representativePosts = postSignals
-      .filter((signal) => signal.normalizedKey === item.normalizedKey)
-      .map((signal) => ({
-        postId: signal.platformRefId,
-        authorHandle: signal.authorHandle,
-        text: signal.text,
-        url: signal.url,
-        publishedAt: signal.publishedAt,
-        metrics: signal.metrics,
-      }));
-
+  private toTrendSnapshotItemContext(item: SourceSnapshotItem) {
     return {
       rank: item.rank,
       title: item.title,
       normalizedKey: item.normalizedKey,
-      representativePosts,
       rawRef: {
         platform: 'x' as const,
         table: 'source_snapshot_item' as const,

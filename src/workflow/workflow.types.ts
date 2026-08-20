@@ -56,14 +56,6 @@ export interface TrendSnapshotItemContext {
   query?: string;
   normalizedKey: string;
   url?: string;
-  representativePosts?: {
-    postId?: string;
-    authorHandle?: string;
-    text?: string;
-    url?: string;
-    publishedAt?: string;
-    metrics?: Record<string, number | undefined>;
-  }[];
   rawRef: {
     platform: 'x';
     table: 'x_trend_snapshot_item' | 'source_snapshot_item';
@@ -89,7 +81,7 @@ export interface XTrendEventContextV1 {
     failedRegions: { region: string; error: string; observedAt: string }[];
   };
   previousSuccessfulSnapshots: {
-    byRegion: Record<string, TrendRegionSnapshotContext | null>;
+    byRegion: Record<string, null>;
   };
   snapshotDiffs: unknown[];
   configuredTopics: {
@@ -193,7 +185,6 @@ export interface XTrendSourceContext {
     rank?: number;
     previousRank?: number;
     snapshotId: string;
-    representativePosts: EvidenceRecordPayload[];
   }[];
   matchedRules?: TriggerPayload[];
 }

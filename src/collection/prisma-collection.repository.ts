@@ -227,6 +227,27 @@ export class PrismaCollectionRepository implements CollectionRepository, OnModul
       .then(mapFetchRun);
   }
 
+  async markStaleRunningFetchRunsFailed(input: {
+    platform: string;
+    olderThan: string;
+    finishedAt: string;
+    error: string;
+  }) {
+    const result = await this.prisma.sourceFetchRun.updateMany({
+      where: {
+        platform: input.platform,
+        status: 'running',
+        startedAt: { lt: new Date(input.olderThan) },
+      },
+      data: {
+        status: 'failed',
+        finishedAt: new Date(input.finishedAt),
+        error: input.error,
+      },
+    });
+    return result.count;
+  }
+
   saveXTrendSnapshot(snapshot: XTrendSnapshot) {
     return this.prisma.xTrendSnapshot
       .create({

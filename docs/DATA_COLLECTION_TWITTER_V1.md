@@ -85,7 +85,7 @@ Twitter/X 数据获取应由 MCP Tool 承担。
 - Base URL：`https://api.twitterapi.io`
 - 鉴权 Header：`X-API-Key: <TWITTERAPI_IO_KEY>`
 - 热搜接口：`GET /twitter/trends?woeid={woeid}&count={count}`
-- `count` 按接口要求最低传 `30`，系统侧再按 `limit` 截断入库。
+- 热搜榜每个地区只采集 Top 30。`count` 按接口要求和业务规则统一传 `30`，系统侧不再额外采集 Top 50 后截断。
 - 本地未配置 `TWITTERAPI_IO_KEY`，或 `TWITTER_USE_MOCK=true` 时，`x.getTrending` 会使用 mock 数据，避免开发环境无法启动。
 
 ### 4.1 Tool 列表
@@ -141,7 +141,7 @@ x.getPostMetrics
     regionWoeids: {
       global: 1
     },
-    defaultTrendLimit: 50
+    defaultTrendLimit: 30
   }
 }
 ```
@@ -729,7 +729,7 @@ PlatformCollectionConfig {
     "monitoredAccounts": ["tier10k", "WatcherGuru", "lookonchain"],
     "topicKeywords": ["OpenAI", "Anthropic", "Bitcoin", "Ethereum"],
     "topicNegativeKeywords": ["giveaway", "airdrop scam"],
-    "defaultTrendLimit": 50,
+    "defaultTrendLimit": 30,
     "defaultPostLimit": 30
   }
 }
@@ -1042,7 +1042,9 @@ GET /sources/snapshots/:snapshotId/diff
 
 ### 13.2 排行榜多份快照怎么处理
 
-每次按地区、采集时间创建一份 `x_trend_snapshot`，榜单项存在 `x_trend_snapshot_item`。同时同步公共 `source_snapshot` 和 `source_snapshot_item`，并计算当前快照和上一个快照的 `source_snapshot_diff`，用于事件形成、前端展示和复盘。
+每次按地区、采集时间创建一份 Top 30 `x_trend_snapshot`，榜单项存在 `x_trend_snapshot_item`。同时同步公共 `source_snapshot` 和 `source_snapshot_item`，并计算当前快照和上一个快照的 `source_snapshot_diff`，用于事件形成、前端展示和复盘。
+
+热搜榜采集阶段不再为每个热搜项批量调用 `x.searchPosts` 获取代表帖子。事件形成前只判断榜单和 diff；事件形成后再由证据增强链路按 Event 追溯代表帖子或外部证据。
 
 ### 13.3 采集数据字段怎么定义
 

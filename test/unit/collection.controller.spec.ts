@@ -26,7 +26,7 @@ describe('CollectionController', () => {
     expect(run.fetchRunId).toBeDefined();
     expect(repository.xTrendSnapshots).toHaveLength(1);
     expect(repository.signals.filter((signal) => signal.sourceType === 'trend')).toHaveLength(1);
-    expect(repository.signals.filter((signal) => signal.sourceType === 'post')).toHaveLength(3);
+    expect(repository.signals.filter((signal) => signal.sourceType === 'post')).toHaveLength(0);
   });
 
   it('returns collection job error details when the run fails', async () => {

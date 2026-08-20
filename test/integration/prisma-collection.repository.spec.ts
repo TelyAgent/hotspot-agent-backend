@@ -24,8 +24,15 @@ describe('PrismaCollectionRepository', () => {
   it('persists collection config, X trend snapshots, snapshot items, diff, and signals', async () => {
     const platform = await repository.findPlatformConfig('x');
     const job = await repository.findJobConfig('x-trending-default');
-    expect(platform?.variables.regions).toEqual(['global']);
-    expect(platform?.variables.regionWoeids).toEqual({ global: 1 });
+    expect(platform?.variables.regions).toEqual(['global', 'United States', 'United Kingdom', 'Japan', 'Korea']);
+    expect(platform?.variables.defaultTrendLimit).toBe(30);
+    expect(platform?.variables.regionWoeids).toEqual({
+      global: 1,
+      'United States': 23424977,
+      'United Kingdom': 23424975,
+      Japan: 23424856,
+      Korea: 23424868,
+    });
     expect(job?.toolName).toBe('x.getTrending');
 
     const fetchRun = await repository.saveFetchRun({

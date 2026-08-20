@@ -88,10 +88,7 @@ describe('XTrendContextBuilder', () => {
       },
       previousSuccessfulSnapshots: {
         byRegion: {
-          'United States': {
-            snapshotId: 'snapshot_us_old',
-            items: [{ rank: 15, title: 'AI', normalizedKey: 'ai' }],
-          },
+          'United States': null,
         },
       },
       configuredTopics: [],
@@ -168,7 +165,7 @@ describe('XTrendContextBuilder', () => {
     ]);
   });
 
-  it('attaches representative post signals to matching trend snapshot items', async () => {
+  it('builds trend items without representative post signals', async () => {
     const repository = new InMemoryCollectionRepository();
     const builder = new XTrendContextBuilder(repository);
 
@@ -195,30 +192,6 @@ describe('XTrendContextBuilder', () => {
         normalizedKey: 'openai',
       },
     ]);
-    await repository.saveSignals([
-      {
-        id: 'sig_post_openai',
-        platformRefTable: 'x_post',
-        platformRefId: 'tweet_1',
-        snapshotId: 'snapshot_us_new',
-        fetchRunId: 'fetch_new',
-        platform: 'x',
-        sourceType: 'post',
-        sourceItemId: 'x:trend_post:snapshot_us_new:openai:tweet_1',
-        title: 'OpenAI',
-        text: 'OpenAI launches a new model.',
-        url: 'https://x.com/OpenAI/status/tweet_1',
-        region: 'United States',
-        rank: 1,
-        authorHandle: 'OpenAI',
-        publishedAt: '2026-08-18T01:59:00.000Z',
-        observedAt: '2026-08-18T02:00:00.000Z',
-        metrics: { views: 1000, likes: 50 },
-        normalizedKey: 'openai',
-        raw: {},
-      },
-    ]);
-
     const context = await builder.build({
       workflowRunId: 'wrun_test',
       observedAt: '2026-08-18T02:05:00.000Z',
@@ -230,14 +203,6 @@ describe('XTrendContextBuilder', () => {
     expect(context.currentBatch.successfulRegions[0].items[0]).toEqual(
       expect.objectContaining({
         title: 'OpenAI',
-        representativePosts: [
-          expect.objectContaining({
-            postId: 'tweet_1',
-            authorHandle: 'OpenAI',
-            text: 'OpenAI launches a new model.',
-            metrics: { views: 1000, likes: 50 },
-          }),
-        ],
       }),
     );
   });

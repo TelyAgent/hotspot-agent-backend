@@ -20,7 +20,6 @@ describe('TwitterCollectionService', () => {
         topicKeywords: ['OpenAI'],
         topicNegativeKeywords: ['scam'],
         defaultTrendLimit: 2,
-        defaultPostLimit: 10,
       },
     };
     const jobConfig: CollectionJobConfig = {
@@ -60,7 +59,7 @@ describe('TwitterCollectionService', () => {
     expect(repository.xTrendSnapshotItems).toHaveLength(4);
     expect(repository.sourceSnapshots).toHaveLength(2);
     expect(repository.signals.filter((signal) => signal.sourceType === 'trend')).toHaveLength(4);
-    expect(repository.signals.filter((signal) => signal.sourceType === 'post')).toHaveLength(40);
+    expect(repository.signals.filter((signal) => signal.sourceType === 'post')).toHaveLength(0);
     expect(repository.signals[0]).toEqual(
       expect.objectContaining({
         platform: 'x',
@@ -135,7 +134,7 @@ describe('TwitterCollectionService', () => {
     });
   });
 
-  it('collects and stores representative top posts for each trend item', async () => {
+  it('does not collect representative posts before event formation', async () => {
     const platformConfig: PlatformCollectionConfig = {
       id: 'x-default',
       platform: 'x',
@@ -147,7 +146,6 @@ describe('TwitterCollectionService', () => {
       variables: {
         regions: ['US'],
         defaultTrendLimit: 1,
-        defaultPostLimit: 3,
       },
     };
     const jobConfig: CollectionJobConfig = {
@@ -185,27 +183,28 @@ describe('TwitterCollectionService', () => {
         },
       ],
     });
+    const searchPosts = jest.fn(async () => ({
+      platform: 'x',
+      sourceType: 'post',
+      query: 'OpenAI',
+      queryType: 'Top',
+      collectedAt: '2026-08-18T00:00:00.000Z',
+      posts: [
+        {
+          postId: 'tweet_1',
+          authorHandle: 'OpenAI',
+          text: 'OpenAI launches a new model.',
+          postType: 'original',
+          publishedAt: '2026-08-18T00:00:00.000Z',
+          metrics: { views: 1000, likes: 50 },
+          raw: {},
+        },
+      ],
+    }));
     tools.register({
       name: 'x.searchPosts',
       description: 'post search tool',
-      invoke: async () => ({
-        platform: 'x',
-        sourceType: 'post',
-        query: 'OpenAI',
-        queryType: 'Top',
-        collectedAt: '2026-08-18T00:00:00.000Z',
-        posts: [
-          {
-            postId: 'tweet_1',
-            authorHandle: 'OpenAI',
-            text: 'OpenAI launches a new model.',
-            postType: 'original',
-            publishedAt: '2026-08-18T00:00:00.000Z',
-            metrics: { views: 1000, likes: 50 },
-            raw: {},
-          },
-        ],
-      }),
+      invoke: searchPosts,
     });
     const repository = new InMemoryCollectionRepository();
     const service = new TwitterCollectionService(repository, tools);
@@ -216,18 +215,10 @@ describe('TwitterCollectionService', () => {
       now: '2026-08-18T00:00:00.000Z',
     });
 
-    expect(repository.signals).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ sourceType: 'trend', normalizedKey: 'openai' }),
-        expect.objectContaining({
-          sourceType: 'post',
-          title: 'OpenAI',
-          normalizedKey: 'openai',
-          authorHandle: 'OpenAI',
-          text: 'OpenAI launches a new model.',
-        }),
-      ]),
-    );
+    expect(repository.signals).toEqual([
+      expect.objectContaining({ sourceType: 'trend', normalizedKey: 'openai' }),
+    ]);
+    expect(searchPosts).not.toHaveBeenCalled();
   });
 
   it('keeps the collection run successful when workflow triggering fails', async () => {
@@ -406,7 +397,7 @@ describe('TwitterCollectionService', () => {
     expect(result.fetchRun).toEqual(
       expect.objectContaining({
         status: 'partial_success',
-        itemCount: 4,
+        itemCount: 1,
         error: 'database write failed',
       }),
     );

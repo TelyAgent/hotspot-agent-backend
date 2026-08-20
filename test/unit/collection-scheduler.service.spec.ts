@@ -140,4 +140,53 @@ describe('CollectionSchedulerService', () => {
 
     expect(twitterCollection.runTrendingJob).toHaveBeenCalled();
   });
+
+  it('marks stale running fetch runs as failed before scheduling jobs', async () => {
+    const repository = new InMemoryCollectionRepository(createDefaultCollectionState());
+    const stale = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString();
+    const recent = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    repository.saveFetchRun({
+      id: 'run_stale',
+      platform: 'x',
+      connectorId: 'x-twitterapi-io',
+      toolName: 'x.getTrending',
+      sourceType: 'trend',
+      status: 'running',
+      input: {},
+      startedAt: stale,
+      itemCount: 0,
+    });
+    repository.saveFetchRun({
+      id: 'run_recent',
+      platform: 'x',
+      connectorId: 'x-twitterapi-io',
+      toolName: 'x.getTrending',
+      sourceType: 'trend',
+      status: 'running',
+      input: {},
+      startedAt: recent,
+      itemCount: 0,
+    });
+    const twitterCollection = {
+      runTrendingJob: jest.fn().mockResolvedValue({
+        fetchRun: { id: 'run_test', status: 'success', itemCount: 0 },
+        toolInput: {},
+        snapshots: [],
+        signals: [],
+      }),
+    };
+    const scheduler = new CollectionSchedulerService(repository, twitterCollection as any);
+
+    await scheduler.handleCronTick();
+
+    expect(repository.fetchRuns.find((run) => run.id === 'run_stale')).toEqual(
+      expect.objectContaining({
+        status: 'failed',
+        error: 'stale_running_fetch_run_timeout',
+      }),
+    );
+    const recentRun = repository.fetchRuns.find((run) => run.id === 'run_recent');
+    expect(recentRun).toEqual(expect.objectContaining({ status: 'running' }));
+    expect(recentRun?.error).toBeUndefined();
+  });
 });
