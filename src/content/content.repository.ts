@@ -68,9 +68,22 @@ export interface ContentRepository {
   listPublicationRecords(): MaybePromise<PublicationRecord[]>;
   updatePublicationRecord(
     id: string,
-    patch: Partial<Pick<PublicationRecord, 'status' | 'trackingStatus' | 'trackingEndsAt'>>,
+    patch: Partial<
+      Pick<
+        PublicationRecord,
+        | 'status'
+        | 'trackingStatus'
+        | 'trackingEndsAt'
+        | 'wellPerforming'
+        | 'trackingRuleVersion'
+        | 'lastTrackingError'
+        | 'lastTrackingErrorAt'
+        | 'trackingFailureCount'
+      >
+    >,
   ): MaybePromise<PublicationRecord>;
   createPublicationRecord(input: CreatePublicationRecordInput): MaybePromise<PublicationRecord>;
   createPublicationMetric(input: CreatePublicationMetricInput): MaybePromise<PublicationMetricRecord>;
   findLatestPublicationMetric(publicationRecordId: string): MaybePromise<PublicationMetricRecord | undefined>;
+  listPublicationMetrics(publicationRecordId?: string): MaybePromise<PublicationMetricRecord[]>;
 }

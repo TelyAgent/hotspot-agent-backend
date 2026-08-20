@@ -228,6 +228,11 @@ export class PrismaContentRepository implements ContentRepository {
         status: patch.status,
         trackingStatus: patch.trackingStatus,
         trackingEndsAt: patch.trackingEndsAt ? new Date(patch.trackingEndsAt) : undefined,
+        wellPerforming: patch.wellPerforming,
+        trackingRuleVersion: patch.trackingRuleVersion,
+        lastTrackingError: patch.lastTrackingError,
+        lastTrackingErrorAt: patch.lastTrackingErrorAt ? new Date(patch.lastTrackingErrorAt) : undefined,
+        trackingFailureCount: patch.trackingFailureCount,
       },
     });
     return mapPublicationRecord(record);
@@ -246,6 +251,11 @@ export class PrismaContentRepository implements ContentRepository {
         publishedAt: new Date(input.publishedAt),
         trackingStatus: input.trackingStatus,
         trackingEndsAt: input.trackingEndsAt ? new Date(input.trackingEndsAt) : undefined,
+        wellPerforming: input.wellPerforming,
+        trackingRuleVersion: input.trackingRuleVersion,
+        lastTrackingError: input.lastTrackingError,
+        lastTrackingErrorAt: input.lastTrackingErrorAt ? new Date(input.lastTrackingErrorAt) : undefined,
+        trackingFailureCount: input.trackingFailureCount,
         createdAt: new Date(input.createdAt),
       },
     });
@@ -276,6 +286,14 @@ export class PrismaContentRepository implements ContentRepository {
       orderBy: { capturedAt: 'desc' },
     });
     return metric ? mapPublicationMetric(metric) : undefined;
+  }
+
+  async listPublicationMetrics(publicationRecordId?: string) {
+    const metrics = await this.contentDelegate('publicationMetric').findMany({
+      where: publicationRecordId ? { publicationRecordId } : undefined,
+      orderBy: { capturedAt: 'desc' },
+    });
+    return metrics.map(mapPublicationMetric);
   }
 
   private contentDelegate(name: string) {
@@ -464,6 +482,11 @@ function mapPublicationRecord(record: unknown): PublicationRecord {
     publishedAt: Date;
     trackingStatus: string;
     trackingEndsAt: Date | null;
+    wellPerforming: boolean;
+    trackingRuleVersion: string;
+    lastTrackingError: string | null;
+    lastTrackingErrorAt: Date | null;
+    trackingFailureCount: number;
     createdAt: Date;
   };
   return {
@@ -477,6 +500,11 @@ function mapPublicationRecord(record: unknown): PublicationRecord {
     publishedAt: row.publishedAt.toISOString(),
     trackingStatus: row.trackingStatus,
     trackingEndsAt: row.trackingEndsAt?.toISOString(),
+    wellPerforming: row.wellPerforming,
+    trackingRuleVersion: row.trackingRuleVersion,
+    lastTrackingError: row.lastTrackingError ?? undefined,
+    lastTrackingErrorAt: row.lastTrackingErrorAt?.toISOString(),
+    trackingFailureCount: row.trackingFailureCount,
     createdAt: row.createdAt.toISOString(),
   };
 }

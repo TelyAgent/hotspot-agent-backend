@@ -143,6 +143,11 @@ export interface PublicationRecord {
   publishedAt: string;
   trackingStatus: string;
   trackingEndsAt?: string;
+  wellPerforming: boolean;
+  trackingRuleVersion: string;
+  lastTrackingError?: string;
+  lastTrackingErrorAt?: string;
+  trackingFailureCount: number;
   createdAt: string;
 }
 
@@ -198,6 +203,11 @@ export interface CreatePublicationRecordInput {
   publishedAt: string;
   trackingStatus: string;
   trackingEndsAt?: string;
+  wellPerforming?: boolean;
+  trackingRuleVersion?: string;
+  lastTrackingError?: string;
+  lastTrackingErrorAt?: string;
+  trackingFailureCount?: number;
   createdAt: string;
 }
 

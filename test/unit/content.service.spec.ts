@@ -388,6 +388,10 @@ describe('ContentService', () => {
         url: 'https://x.com/account_flash/status/1234567890',
         status: 'published',
         trackingStatus: 'tracking',
+        trackingEndsAt: '2026-08-27T01:30:00.000Z',
+        wellPerforming: false,
+        trackingRuleVersion: 'publication-tracking-v1',
+        trackingFailureCount: 0,
       }),
     );
     expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'published' }));
@@ -425,6 +429,9 @@ describe('ContentService', () => {
       publishedAt: '2026-08-20T01:30:00.000Z',
       trackingStatus: 'tracking',
       trackingEndsAt: '2026-08-27T01:30:00.000Z',
+      wellPerforming: false,
+      trackingRuleVersion: 'publication-tracking-v1',
+      trackingFailureCount: 0,
       createdAt: '2026-08-20T01:30:00.000Z',
     });
     const service = new ContentService(repository);
@@ -450,6 +457,12 @@ describe('ContentService', () => {
       }),
     );
     expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'tracking' }));
+    expect(repository.publicationRecords[0]).toEqual(
+      expect.objectContaining({
+        wellPerforming: true,
+        trackingEndsAt: '2026-09-03T01:30:00.000Z',
+      }),
+    );
 
     const completed = await service.completeTracking('publication_1', {
       now: '2026-08-27T01:30:00.000Z',

@@ -13,6 +13,12 @@ import { CONTENT_REPOSITORY } from './content.tokens';
 import { ContentRepository } from './content.repository';
 import { AccountResponseTaskRecord, EventContextPackRecord, OperationAccountRecord } from './content.types';
 import { CONTENT_CANDIDATE_GENERATOR, CONTENT_RISK_PRECHECKER } from './content.tokens';
+import {
+  DEFAULT_PUBLICATION_TRACKING_RULE,
+  defaultTrackingEndsAt,
+  extendedTrackingEndsAt,
+  isWellPerformingMetric,
+} from './publication-tracking-rule';
 
 export interface GenerateCandidatesRequest {
   generationKind?: 'initial' | 'regenerate_all' | 'revise_selected';
@@ -231,7 +237,10 @@ export class ContentService {
       status: 'published',
       publishedAt: now,
       trackingStatus: 'tracking',
-      trackingEndsAt: new Date(new Date(now).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      trackingEndsAt: defaultTrackingEndsAt(now),
+      wellPerforming: false,
+      trackingRuleVersion: DEFAULT_PUBLICATION_TRACKING_RULE.version,
+      trackingFailureCount: 0,
       createdAt: now,
     });
     await Promise.all([
@@ -262,16 +271,34 @@ export class ContentService {
       raw: request.raw,
       createdAt: now,
     });
+    const publicationPatch = isWellPerformingMetric(publication, metric)
+      ? {
+          trackingStatus: 'tracking',
+          wellPerforming: true,
+          trackingEndsAt: extendedTrackingEndsAt(publication),
+        }
+      : { trackingStatus: 'tracking' };
     await Promise.all([
-      this.contentRepository.updatePublicationRecord(publication.id, {
-        trackingStatus: 'tracking',
-      }),
+      this.contentRepository.updatePublicationRecord(publication.id, publicationPatch),
       this.contentRepository.updateAccountResponseTask(publication.taskId, {
         status: 'tracking',
         updatedAt: now,
       }),
     ]);
     return metric;
+  }
+
+  async recordPublicationTrackingFailure(publicationRecordId: string, error: unknown, now = new Date().toISOString()) {
+    const publication = await this.contentRepository.findPublicationRecordById(publicationRecordId);
+    if (!publication) {
+      throw new NotFoundException(`Publication record not found: ${publicationRecordId}`);
+    }
+    return this.contentRepository.updatePublicationRecord(publication.id, {
+      trackingStatus: 'tracking_error',
+      lastTrackingError: error instanceof Error ? error.message : String(error),
+      lastTrackingErrorAt: now,
+      trackingFailureCount: publication.trackingFailureCount + 1,
+    });
   }
 
   async completeTracking(publicationRecordId: string, request: CompleteTrackingRequest = {}) {

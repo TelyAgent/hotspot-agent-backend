@@ -140,8 +140,14 @@ export class InMemoryContentRepository implements ContentRepository {
   }
 
   createPublicationRecord(input: CreatePublicationRecordInput): PublicationRecord {
-    this.publicationRecords.push(input);
-    return input;
+    const record: PublicationRecord = {
+      ...input,
+      wellPerforming: input.wellPerforming ?? false,
+      trackingRuleVersion: input.trackingRuleVersion ?? 'publication-tracking-v1',
+      trackingFailureCount: input.trackingFailureCount ?? 0,
+    };
+    this.publicationRecords.push(record);
+    return record;
   }
 
   createPublicationMetric(input: CreatePublicationMetricInput): PublicationMetricRecord {
@@ -153,5 +159,11 @@ export class InMemoryContentRepository implements ContentRepository {
     return this.publicationMetrics
       .filter((metric) => metric.publicationRecordId === publicationRecordId)
       .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())[0];
+  }
+
+  listPublicationMetrics(publicationRecordId?: string): PublicationMetricRecord[] {
+    return this.publicationMetrics
+      .filter((metric) => !publicationRecordId || metric.publicationRecordId === publicationRecordId)
+      .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime());
   }
 }

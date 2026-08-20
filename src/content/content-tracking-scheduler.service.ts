@@ -5,8 +5,7 @@ import { ContentRepository } from './content.repository';
 import { ContentService } from './content.service';
 import { PublicationMetricsCollector } from './publication-metrics.collector';
 import { PublicationRecord } from './content.types';
-
-const DEFAULT_TRACKING_INTERVAL_MS = 60 * 60 * 1000;
+import { isPublicationMetricDue, isPublicationTrackingExpired } from './publication-tracking-rule';
 
 @Injectable()
 export class ContentTrackingSchedulerService {
@@ -30,10 +29,10 @@ export class ContentTrackingSchedulerService {
     let collected = 0;
     let completed = 0;
     for (const publication of publications) {
-      if (publication.trackingStatus !== 'tracking') {
+      if (publication.trackingStatus !== 'tracking' && publication.trackingStatus !== 'tracking_error') {
         continue;
       }
-      if (isTrackingExpired(publication, now)) {
+      if (isPublicationTrackingExpired(publication, now)) {
         await this.contentService.completeTracking(publication.id, { now });
         completed += 1;
         continue;
@@ -52,6 +51,7 @@ export class ContentTrackingSchedulerService {
           collected += 1;
         }
       } catch (error) {
+        await this.contentService.recordPublicationTrackingFailure(publication.id, error, now);
         this.logger.warn(
           `Publication metrics collection failed for ${publication.id}: ${error instanceof Error ? error.message : String(error)}`,
         );
@@ -64,13 +64,6 @@ export class ContentTrackingSchedulerService {
 
   private async isMetricDue(publication: PublicationRecord, now: string) {
     const latest = await this.contentRepository.findLatestPublicationMetric(publication.id);
-    if (!latest) {
-      return true;
-    }
-    return new Date(now).getTime() - new Date(latest.capturedAt).getTime() >= DEFAULT_TRACKING_INTERVAL_MS;
+    return isPublicationMetricDue(publication, latest, now);
   }
-}
-
-function isTrackingExpired(publication: PublicationRecord, now: string) {
-  return publication.trackingEndsAt ? new Date(publication.trackingEndsAt).getTime() <= new Date(now).getTime() : false;
 }

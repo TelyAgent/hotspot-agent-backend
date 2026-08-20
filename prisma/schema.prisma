@@ -122,6 +122,11 @@ model PublicationRecord {
   publishedAt    DateTime
   trackingStatus String
   trackingEndsAt DateTime?
+  wellPerforming Boolean   @default(false)
+  trackingRuleVersion String @default("publication-tracking-v1")
+  lastTrackingError String?
+  lastTrackingErrorAt DateTime?
+  trackingFailureCount Int @default(0)
   createdAt      DateTime  @default(now())
 
   @@index([eventId, accountId])
