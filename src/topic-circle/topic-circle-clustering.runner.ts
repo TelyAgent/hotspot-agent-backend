@@ -45,7 +45,7 @@ export class TopicCircleClusteringWorkflowRunner implements TopicCircleClusterin
   ) {}
 
   async runTopicCircleClustering(input: TopicCircleClusteringInput): Promise<{ candidates: TopicCircleClusteredCandidate[] }> {
-    const loadedWorkflow = await this.workflowLoader.load('topic-circle-clustering', 'topic-circle/topic-clustering');
+    const loadedWorkflow = await this.workflowLoader.load('topic-clustering', 'topic-circle');
     const modelOutput = await this.modelAdapter.generateStructuredOutput({
       workflowId: loadedWorkflow.definition.workflowId,
       workflowVersion: loadedWorkflow.definition.version,

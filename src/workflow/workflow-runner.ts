@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   EVENT_COMMAND_EXECUTOR,
@@ -12,6 +12,7 @@ import { WorkflowModelAdapter, WorkflowModelContext } from './workflow-model.ada
 import { WorkflowOutputValidator } from './workflow-output-validator';
 import { WorkflowRepository } from './workflow.repository';
 import {
+  EventWorkflowCommandsV1,
   WorkflowCommandExecutionRecord,
   WorkflowCommandRecord,
   WorkflowRunRecord,
@@ -37,6 +38,8 @@ export interface WorkflowRunResult {
 
 @Injectable()
 export class WorkflowRunner {
+  private readonly logger = new Logger(WorkflowRunner.name);
+
   constructor(
     @Inject(WORKFLOW_REPOSITORY) private readonly workflowRepository: WorkflowRepository,
     @Inject(WORKFLOW_LOADER) private readonly workflowLoader: WorkflowLoader,
@@ -65,7 +68,6 @@ export class WorkflowRunner {
       startedAt: observedAt,
       input: context,
     });
-
     try {
       return await this.runLoadedWorkflow(loadedWorkflow, workflowRunId, context);
     } catch (error) {
@@ -79,7 +81,7 @@ export class WorkflowRunner {
   }
 
   async runTopicCircleEventFormation(input: RunTopicCircleEventFormationInput): Promise<WorkflowRunResult> {
-    const loadedWorkflow = await this.workflowLoader.load('topic-circle-event-formation', 'topic-circle/event-formation');
+    const loadedWorkflow = await this.workflowLoader.load('event-formation', 'topic-circle');
     const workflowDefinition = await this.workflowRepository.saveWorkflowDefinition(loadedWorkflow.definition);
     const observedAt = input.observedAt ?? new Date().toISOString();
     const workflowRunId = `wrun_${randomUUID()}`;
@@ -95,10 +97,14 @@ export class WorkflowRunner {
       startedAt: observedAt,
       input: context,
     });
+    this.logTopicCircleModelInput(loadedWorkflow, workflowRunId, context);
 
     try {
-      return await this.runLoadedWorkflow(loadedWorkflow, workflowRunId, context);
+      return await this.runLoadedWorkflow(loadedWorkflow, workflowRunId, context, { logModelIO: true });
     } catch (error) {
+      this.logger.error(
+        `[TopicCircleModelError] workflowId=${loadedWorkflow.definition.workflowId} runId=${workflowRunId} error=${error instanceof Error ? error.message : String(error)}`,
+      );
       const failedRun = await this.workflowRepository.finishWorkflowRun(workflowRunId, {
         status: 'failed',
         finishedAt: new Date().toISOString(),
@@ -112,6 +118,7 @@ export class WorkflowRunner {
     loadedWorkflow: LoadedWorkflow,
     workflowRunId: string,
     context: object,
+    options: { logModelIO?: boolean } = {},
   ) {
     const modelOutput = await this.modelAdapter.generateStructuredOutput({
       workflowId: loadedWorkflow.definition.workflowId,
@@ -120,7 +127,26 @@ export class WorkflowRunner {
       outputSchema: loadedWorkflow.outputSchema,
       context: context as WorkflowModelContext,
     });
+    if (options.logModelIO) {
+      this.logger.log(
+        `[TopicCircleModelOutput] workflowId=${loadedWorkflow.definition.workflowId} runId=${workflowRunId} output=${this.compactJson(modelOutput)}`,
+      );
+    }
     const output = this.outputValidator.validate(modelOutput);
+    if (options.logModelIO) {
+      this.logger.log(
+        `[TopicCircleValidatedOutput] workflowId=${loadedWorkflow.definition.workflowId} runId=${workflowRunId} commandCount=${output.commands.length} output=${this.compactJson(output)}`,
+      );
+    }
+    return this.executeWorkflowOutput(workflowRunId, output);
+  }
+
+  private async executeWorkflowOutput(
+    workflowRunId: string,
+    output: EventWorkflowCommandsV1,
+    now?: string,
+    model?: string,
+  ) {
     const commands = await this.workflowRepository.saveWorkflowCommands(
       output.commands.map((command): WorkflowCommandRecord => ({
         id: `cmd_${randomUUID()}`,
@@ -137,15 +163,32 @@ export class WorkflowRunner {
           workflowRunId,
           workflowCommandId: command.id,
           command: command.payload,
+          now,
         }),
       ),
     );
     const run = await this.workflowRepository.finishWorkflowRun(workflowRunId, {
       status: this.resolveRunStatus(executions),
       finishedAt: new Date().toISOString(),
+      model,
       output,
     });
     return { run, commands, executions };
+  }
+
+  private logTopicCircleModelInput(loadedWorkflow: LoadedWorkflow, workflowRunId: string, context: object) {
+    this.logger.log(
+      `[TopicCircleModelInput] workflowId=${loadedWorkflow.definition.workflowId} version=${loadedWorkflow.definition.version} runId=${workflowRunId} context=${this.compactJson(context)}`,
+    );
+  }
+
+  private compactJson(value: unknown) {
+    const text = JSON.stringify(value);
+    const limit = 8000;
+    if (!text || text.length <= limit) {
+      return text;
+    }
+    return `${text.slice(0, limit)}...<truncated ${text.length - limit} chars>`;
   }
 
   private resolveRunStatus(executions: WorkflowCommandExecutionRecord[]): WorkflowRunStatus {

@@ -39,7 +39,6 @@ const topicCircleSourceContextSchema = z
   .object({
     topicCircle: z.record(z.string(), z.unknown()),
     candidate: z.record(z.string(), z.unknown()),
-    posts: z.array(z.record(z.string(), z.unknown())),
     matchedRules: z.array(triggerSchema),
   })
   .passthrough();

@@ -49,7 +49,7 @@ describe('TopicCircleClusteringWorkflowRunner', () => {
       ],
     });
 
-    expect(loader.load).toHaveBeenCalledWith('topic-circle-clustering', 'topic-circle/topic-clustering');
+    expect(loader.load).toHaveBeenCalledWith('topic-clustering', 'topic-circle');
     expect(model.generateStructuredOutput).toHaveBeenCalledWith(
       expect.objectContaining({
         workflowId: 'topic-circle-clustering',

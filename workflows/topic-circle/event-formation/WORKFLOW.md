@@ -11,7 +11,7 @@ model: default_reasoning
 
 # 目标
 
-根据主题圈候选话题的讨论广度和流量强度，判断是否创建或更新统一 Event。
+根据主题圈候选话题的指标和本文件定义的规则，判断是否创建统一 Event。规则解释由 Workflow 完成，服务端只提供候选指标、去重上下文和命令执行能力。
 
 # 触发规则
 
@@ -22,7 +22,7 @@ model: default_reasoning
 - TC-03：单点流量爆发，`Tmax >= 3` 且该帖子进入账号近期表现前 5%。
 - TC-04：讨论与流量混合上升，`B3h >= 2` 且 `Tmax >= 2`。
 
-四条规则是“或”的关系。任一规则首次命中后，立即输出 `create_event` 并启动内容响应流水线；后续同一候选话题或同一 Event 再次命中，只输出 `update_event_context`。
+四条规则是“或”的关系。任一规则命中后，输出 `create_event` 并启动内容响应流水线。服务端只会把未触发且未绑定 Event 的候选送入本 Workflow；已触发候选不再参与事件形成。
 
 如果四条规则都不命中，必须输出一个 `ignore` 命令，原因说明为“未达到主题圈关注度触发阈值”，不得创建或更新 Event。
 
@@ -30,13 +30,12 @@ model: default_reasoning
 
 运行上下文使用 `topic_circle_event_formation_context_v1`：
 
-- `topicCircle`：主题圈配置，包含名称、关键词、正例和反例。
-- `candidate`：候选话题，包含 `id`、`title`、`summary`、`coreFact`、`normalizedEventKey`、`confidence`、`b3h`、`b24h`、`tmax`、`tmaxTop5`、`triggeredAt`、`eventId`、`ruleVersion`。
+- `topicCircle`：主题圈最小标识，只包含 `id`、`name`。
+- `candidate`：候选话题最小标识和触发指标，只包含 `id`、`title`、`normalizedEventKey`、`b3h`、`b24h`、`tmax`、`tmaxTop5`、`triggeredAt`、`eventId`、`ruleVersion`。
 - `previousTrigger`：该候选过去是否已经触发过。
 - `existingEvent`：如果已有同 `normalizedEventKey` 的 Event，会放在这里。
-- `posts`：本次候选关联的代表帖子。
 
-必须在工作流中根据 `candidate.b3h`、`candidate.b24h`、`candidate.tmax`、`candidate.tmaxTop5` 自行判断命中的规则。服务端只负责提供指标，不在代码中硬编码触发规则。
+工作流不需要读取帖子正文、帖子引用、贡献账号、主题圈关键词、正反例，也不需要根据帖子内容判断事实是否成立。当前规则只依赖 `candidate.b3h`、`candidate.b24h`、`candidate.tmax`、`candidate.tmaxTop5`。帖子正文会在 Event 形成后由服务端回填到证据表，供后续复盘和追溯使用。
 
 # 事实边界
 
@@ -45,8 +44,6 @@ model: default_reasoning
 输出 Event Intake 时必须保留：
 
 - 主题圈名称。
-- 贡献账号。
-- 关联帖子。
 - B3h、B24h、Tmax、tmaxTop5。
 - 命中的规则。
 - ruleVersion。
@@ -73,5 +70,6 @@ model: default_reasoning
 
 - `topicCircle`
 - `candidate`
-- `posts`
 - `matchedRules`
+
+`eventIntake.evidenceRecords` 和命令级 `evidenceRecords` 可以为空数组。完整帖子证据由服务端在 Event 创建或首次绑定后写入 `event_evidence` 和 `event_source_context`。

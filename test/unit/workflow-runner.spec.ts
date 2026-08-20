@@ -8,6 +8,54 @@ import { WorkflowRunner } from '../../src/workflow/workflow-runner';
 import { XTrendContextBuilder } from '../../src/workflow/x-trend-context.builder';
 
 describe('WorkflowRunner', () => {
+  it('loads topic circle event formation workflow from the topic-circle folder', async () => {
+    const workflowRepository = new InMemoryWorkflowRepository();
+    const loader = {
+      load: jest.fn().mockResolvedValue({
+        definition: {
+          id: 'wdef_topic_circle',
+          workflowId: 'topic-circle-event-formation',
+          name: '重点主题形成 Event',
+          type: 'event_formation',
+          version: '1.0.0',
+          status: 'enabled',
+          markdownPath: 'workflows/topic-circle/event-formation/WORKFLOW.md',
+          outputSchemaPath: 'workflows/topic-circle/event-formation/output.schema.json',
+          checksum: 'checksum_topic_circle',
+          createdAt: '2026-08-20T00:00:00.000Z',
+          updatedAt: '2026-08-20T00:00:00.000Z',
+        },
+        markdown: '# topic circle event formation',
+        outputSchema: {},
+      }),
+    };
+    const adapter = new FakeWorkflowModelAdapter((input) => ({
+      schemaVersion: 'event_workflow_commands_v1',
+      workflowId: input.workflowId,
+      workflowVersion: input.workflowVersion,
+      runId: String(input.context.workflowRunId),
+      commands: [],
+    }));
+    const runner = new WorkflowRunner(
+      workflowRepository,
+      loader as never,
+      new XTrendContextBuilder(new InMemoryCollectionRepository()),
+      adapter,
+      new WorkflowOutputValidator(),
+      new EventCommandExecutor(workflowRepository),
+    );
+
+    await runner.runTopicCircleEventFormation({
+      observedAt: '2026-08-20T07:00:00.000Z',
+      context: {
+        schemaVersion: 'topic_circle_event_formation_context_v1',
+        candidate: { id: 'candidate_1' },
+      },
+    });
+
+    expect(loader.load).toHaveBeenCalledWith('event-formation', 'topic-circle');
+  });
+
   it('loads markdown workflow, delegates event decisions to the model, and executes returned commands', async () => {
     const collectionRepository = new InMemoryCollectionRepository();
     await collectionRepository.saveSourceSnapshot({

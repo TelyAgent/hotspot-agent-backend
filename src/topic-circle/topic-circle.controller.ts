@@ -11,8 +11,8 @@ export class TopicCircleController {
   }
 
   @Post('collect')
-  async collect() {
-    const result = await this.service.collectAll();
+  async collect(@Query('circle') circle?: string) {
+    const result = await this.service.collectAll(undefined, circle);
     const fetchRun = result.fetchRun;
     return {
       accounts: fetchRun.accountCount,

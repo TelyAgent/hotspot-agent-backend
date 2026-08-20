@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { ToolRegistry } from '../connectors/tool-registry';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkflowRunner } from '../workflow/workflow-runner';
+import { TriggerPayload } from '../workflow/workflow.types';
 import { TopicCircleClusteringWorkflowRunner } from './topic-circle-clustering.runner';
 import {
   DEFAULT_TOPIC_CIRCLES,
@@ -87,11 +88,14 @@ export interface TopicCircleClusteringRunner {
 @Injectable()
 export class TopicCircleService implements OnModuleInit {
   private readonly logger = new Logger(TopicCircleService.name);
+  private workflowRunnerMissingWarned = false;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly tools: ToolRegistry,
-    @Optional() private readonly workflowRunner?: Pick<WorkflowRunner, 'runTopicCircleEventFormation'>,
+    @Optional()
+    @Inject(WorkflowRunner)
+    private readonly workflowRunner?: Pick<WorkflowRunner, 'runTopicCircleEventFormation'>,
     @Optional()
     @Inject(TopicCircleClusteringWorkflowRunner)
     private readonly clusteringRunner?: TopicCircleClusteringRunner,
@@ -143,9 +147,9 @@ export class TopicCircleService implements OnModuleInit {
     }
   }
 
-  async collectAll(now = new Date()): Promise<TopicCircleCollectionResult> {
+  async collectAll(now = new Date(), circle?: string): Promise<TopicCircleCollectionResult> {
     const accounts = await this.prisma.topicCircleAccount.findMany({
-      where: { enabled: true, topicCircle: { enabled: true } },
+      where: { enabled: true, topicCircle: this.topicCircleScopeWhere(circle) },
       include: { topicCircle: true },
       orderBy: [{ topicCircleId: 'asc' }, { handle: 'asc' }],
     });
@@ -158,6 +162,7 @@ export class TopicCircleService implements OnModuleInit {
         accountCount: accounts.length,
         itemCount: 0,
         input: {
+          circle: circle ?? null,
           accountCount: accounts.length,
           handles: accounts.map((account) => account.handle),
         },
@@ -195,23 +200,23 @@ export class TopicCircleService implements OnModuleInit {
     });
 
     if (itemCount > 0) {
-      analysis = await this.analyzeAndTrigger(now);
+      analysis = await this.analyzeAndTrigger(now, circle);
     }
 
     return { fetchRun: finished, analysis };
   }
 
-  async analyzeAndTrigger(now = new Date()) {
-    const summarized = await this.summarizeTopics(now);
-    const metrics = await this.computeMetrics(now);
-    const trigger = await this.evaluateTriggers(now);
+  async analyzeAndTrigger(now = new Date(), circle?: string) {
+    const summarized = await this.summarizeTopics(now, circle);
+    const metrics = await this.computeMetrics(now, circle);
+    const trigger = await this.evaluateTriggers(now, circle);
     return { ...summarized, ...metrics, ...trigger };
   }
 
-  async summarizeTopics(now = new Date()) {
+  async summarizeTopics(now = new Date(), circle?: string) {
     const since24h = new Date(now.getTime() - TOPIC_WINDOW_MS);
     const circles = await this.prisma.topicCircleConfig.findMany({
-      where: { enabled: true },
+      where: this.topicCircleScopeWhere(circle),
     });
     let topics = 0;
 
@@ -315,11 +320,14 @@ export class TopicCircleService implements OnModuleInit {
     );
   }
 
-  async computeMetrics(now = new Date()) {
+  async computeMetrics(now = new Date(), circle?: string) {
     const since24h = new Date(now.getTime() - TOPIC_WINDOW_MS);
     const since3h = new Date(now.getTime() - SHORT_WINDOW_MS);
     const candidates = await this.prisma.topicCircleCandidate.findMany({
-      where: { updatedAt: { gte: since24h } },
+      where: {
+        updatedAt: { gte: since24h },
+        ...(circle ? { topicCircle: this.topicCircleIdentityWhere(circle) } : {}),
+      },
       include: { posts: true },
     });
     let computed = 0;
@@ -347,9 +355,14 @@ export class TopicCircleService implements OnModuleInit {
     return { computed };
   }
 
-  async evaluateTriggers(now = new Date()) {
+  async evaluateTriggers(now = new Date(), circle?: string) {
     const candidates = await this.prisma.topicCircleCandidate.findMany({
-      where: { updatedAt: { gte: new Date(now.getTime() - TOPIC_WINDOW_MS) } },
+      where: {
+        updatedAt: { gte: new Date(now.getTime() - TOPIC_WINDOW_MS) },
+        triggeredAt: null,
+        eventId: null,
+        ...(circle ? { topicCircle: this.topicCircleIdentityWhere(circle) } : {}),
+      },
       include: { topicCircle: true, posts: true },
       orderBy: { updatedAt: 'desc' },
     });
@@ -380,6 +393,10 @@ export class TopicCircleService implements OnModuleInit {
           workflowRunId: result.run.id,
         },
       });
+      if (firstTrigger) {
+        const matchedRules = this.matchedRulesFromCommands(result.commands);
+        await this.saveTriggeredEventEvidence(candidate, eventId, result.run.id, matchedRules);
+      }
       if (firstTrigger) triggered++;
       else refreshed++;
     }
@@ -731,13 +748,12 @@ export class TopicCircleService implements OnModuleInit {
     now: Date,
   ) {
     if (!this.workflowRunner) {
+      if (!this.workflowRunnerMissingWarned) {
+        this.workflowRunnerMissingWarned = true;
+        this.logger.warn('重点主题事件形成工作流未注入，候选不会形成 Event。');
+      }
       return undefined;
     }
-    const sourcePosts = await this.prisma.xTopicCirclePost.findMany({
-      where: { postId: { in: candidate.posts.map((post) => post.postId) } },
-      orderBy: { publishedAt: 'desc' },
-      take: 20,
-    });
     return this.workflowRunner.runTopicCircleEventFormation({
       observedAt: now.toISOString(),
       context: {
@@ -745,21 +761,14 @@ export class TopicCircleService implements OnModuleInit {
         topicCircle: {
           id: candidate.topicCircle.id,
           name: candidate.topicCircle.name,
-          keywords: candidate.topicCircle.keywords,
-          positiveExamples: candidate.topicCircle.positiveExamples,
-          negativeExamples: candidate.topicCircle.negativeExamples,
         },
         candidate: {
           id: candidate.id,
           title: candidate.title,
-          summary: candidate.summary,
-          coreFact: candidate.coreFact,
           normalizedEventKey: candidate.normalizedEventKey,
-          confidence: this.workflowConfidence(candidate.confidence),
           b3h: candidate.b3h,
           b24h: candidate.b24h,
           tmax: candidate.tmax,
-          tmaxPostId: candidate.tmaxPostId,
           tmaxTop5: candidate.tmaxTop5,
           triggeredAt: candidate.triggeredAt?.toISOString() ?? null,
           eventId: candidate.eventId,
@@ -771,17 +780,109 @@ export class TopicCircleService implements OnModuleInit {
           eventId: candidate.eventId,
         },
         existingEvent: await this.prisma.event.findUnique({ where: { normalizedEventKey: candidate.normalizedEventKey } }),
-        posts: sourcePosts.map((post) => ({
-          postId: post.postId,
-          authorHandle: post.authorHandle,
-          text: post.text,
-          url: post.url,
-          postType: post.postType,
-          publishedAt: post.publishedAt.toISOString(),
-          metrics: post.metrics,
-        })),
       },
     });
+  }
+
+  private async saveTriggeredEventEvidence(
+    candidate: Prisma.TopicCircleCandidateGetPayload<{ include: { topicCircle: true; posts: true } }>,
+    eventId: string,
+    workflowRunId: string,
+    matchedRules: TriggerPayload[],
+  ) {
+    const postIds = [...new Set(candidate.posts.map((post) => post.postId))];
+    if (postIds.length === 0) return;
+
+    const sourcePosts = await this.prisma.xTopicCirclePost.findMany({
+      where: { postId: { in: postIds } },
+      orderBy: { publishedAt: 'desc' },
+      take: 20,
+    });
+    const postRefs = sourcePosts.map((post) => ({
+      postId: post.postId,
+      authorHandle: post.authorHandle,
+      url: post.url,
+      postType: post.postType,
+      publishedAt: post.publishedAt.toISOString(),
+      metrics: post.metrics,
+    }));
+
+    await this.prisma.eventSourceContext.create({
+      data: {
+        id: `event_source_context_${randomUUID()}`,
+        eventId,
+        workflowRunId,
+        sourceType: 'x_topic_circle',
+        payload: {
+          schemaVersion: 'topic_circle_event_evidence_v1',
+          topicCircle: {
+            id: candidate.topicCircle.id,
+            name: candidate.topicCircle.name,
+          },
+          candidate: {
+            id: candidate.id,
+            title: candidate.title,
+            summary: candidate.summary,
+            coreFact: candidate.coreFact,
+            normalizedEventKey: candidate.normalizedEventKey,
+            b3h: candidate.b3h,
+            b24h: candidate.b24h,
+            tmax: candidate.tmax,
+            tmaxPostId: candidate.tmaxPostId,
+            tmaxTop5: candidate.tmaxTop5,
+            ruleVersion: candidate.ruleVersion,
+          },
+          matchedRules,
+          postRefs,
+        } as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    await Promise.all(
+      sourcePosts.map((post) =>
+        this.prisma.eventEvidence.create({
+          data: {
+            id: `event_evidence_${randomUUID()}`,
+            eventId,
+            workflowRunId,
+            sourceType: 'x_topic_circle',
+            url: post.url,
+            claim: `${post.authorHandle} 发布了与「${candidate.title}」相关的主题圈帖子。`,
+            payload: {
+              postId: post.postId,
+              authorHandle: post.authorHandle,
+              authorName: post.authorName,
+              text: post.text,
+              postType: post.postType,
+              publishedAt: post.publishedAt.toISOString(),
+              metrics: post.metrics,
+            } as unknown as Prisma.InputJsonValue,
+          },
+        }),
+      ),
+    );
+  }
+
+  private matchedRulesFromCommands(commands: Array<{ payload: { type: string; trigger?: TriggerPayload } }>) {
+    return commands
+      .map((command) => command.payload.trigger)
+      .filter((trigger): trigger is TriggerPayload => Boolean(trigger));
+  }
+
+  private topicCircleScopeWhere(circle?: string): Prisma.TopicCircleConfigWhereInput {
+    return {
+      enabled: true,
+      ...(circle ? this.topicCircleIdentityWhere(circle) : {}),
+    };
+  }
+
+  private topicCircleIdentityWhere(circle: string): Prisma.TopicCircleConfigWhereInput {
+    return {
+      OR: [
+        { id: circle },
+        { name: circle },
+      ],
+    };
   }
 
   private async latestCandidatesForCircle(topicCircleId: string) {
@@ -831,12 +932,6 @@ export class TopicCircleService implements OnModuleInit {
       .replace(/[^a-z0-9\u4e00-\u9fa5:_-]+/g, '-')
       .replace(/-+/g, '-')
       .slice(0, 180);
-  }
-
-  private workflowConfidence(confidence: number): 'high' | 'medium' | 'low' {
-    if (confidence >= 0.85) return 'high';
-    if (confidence >= 0.6) return 'medium';
-    return 'low';
   }
 
   private isEffectivePost(post: XAccountPost) {

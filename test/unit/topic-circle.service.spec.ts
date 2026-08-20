@@ -1,6 +1,14 @@
+import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
 import { TopicCircleService } from '../../src/topic-circle/topic-circle.service';
+import { WorkflowRunner } from '../../src/workflow/workflow-runner';
 
 describe('TopicCircleService', () => {
+  it('declares an explicit WorkflowRunner injection token for event formation', () => {
+    const deps = Reflect.getMetadata(SELF_DECLARED_DEPS_METADATA, TopicCircleService) ?? [];
+
+    expect(deps).toContainEqual({ index: 2, param: WorkflowRunner });
+  });
+
   it('seeds five topic circles and fifty monitored accounts', async () => {
     const prisma = {
       topicCircleConfig: {
@@ -38,7 +46,7 @@ describe('TopicCircleService', () => {
     );
   });
 
-  it('delegates candidate trigger decisions to the workflow runner', async () => {
+  it('delegates topic circle trigger decisions to the workflow runner', async () => {
     const now = new Date('2026-08-19T10:00:00.000Z');
     const workflowRunner = {
       runTopicCircleEventFormation: jest.fn().mockResolvedValue({
@@ -64,9 +72,9 @@ describe('TopicCircleService', () => {
             coreFact: '核心事实',
             normalizedEventKey: 'topic-circle:test',
             confidence: 0.72,
-            b3h: 0,
-            b24h: 0,
-            tmax: null,
+            b3h: 3,
+            b24h: 3,
+            tmax: 1.5,
             tmaxPostId: null,
             tmaxTop5: false,
             triggeredAt: null,
@@ -80,7 +88,14 @@ describe('TopicCircleService', () => {
               positiveExamples: [],
               negativeExamples: [],
             },
-            posts: [{ postId: 'post_1' }],
+            posts: [
+              {
+                postId: 'post_1',
+                handle: 'OpenAI',
+                publishedAt: now,
+                contributionWindow: { bucket: '3h' },
+              },
+            ],
             updatedAt: now,
           },
         ]),
@@ -102,21 +117,56 @@ describe('TopicCircleService', () => {
       event: {
         findUnique: jest.fn().mockResolvedValue(null),
       },
+      eventSourceContext: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+      eventEvidence: {
+        create: jest.fn().mockResolvedValue({}),
+      },
     };
     const service = new TopicCircleService(prisma as never, {} as never, workflowRunner);
 
     const result = await service.evaluateTriggers(now);
 
     expect(result).toEqual({ triggered: 1, refreshed: 0 });
-    expect(workflowRunner.runTopicCircleEventFormation).toHaveBeenCalledWith(
+    const workflowInput = workflowRunner.runTopicCircleEventFormation.mock.calls[0][0];
+    expect(workflowInput).toEqual(
       expect.objectContaining({
         observedAt: now.toISOString(),
-        context: expect.objectContaining({
-          schemaVersion: 'topic_circle_event_formation_context_v1',
-          candidate: expect.objectContaining({ b3h: 0, b24h: 0, tmax: null }),
-        }),
       }),
     );
+    expect(workflowInput.context).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'topic_circle_event_formation_context_v1',
+        topicCircle: {
+          id: 'topic-ai-tech',
+          name: 'AI 与科技',
+        },
+        candidate: {
+          id: 'candidate_1',
+          title: '候选话题',
+          normalizedEventKey: 'topic-circle:test',
+          b3h: 3,
+          b24h: 3,
+          tmax: 1.5,
+          tmaxTop5: false,
+          triggeredAt: null,
+          eventId: null,
+          ruleVersion: 'topic-circle-radar-v1.2',
+        },
+      }),
+    );
+    expect(workflowInput.context).not.toHaveProperty('posts');
+    expect(workflowInput.context).not.toHaveProperty('postRefs');
+    expect(workflowInput.context).not.toHaveProperty('contributors');
+    expect(workflowInput.context).not.toHaveProperty('postCount');
+    expect(workflowInput.context.topicCircle).not.toHaveProperty('keywords');
+    expect(workflowInput.context.topicCircle).not.toHaveProperty('positiveExamples');
+    expect(workflowInput.context.topicCircle).not.toHaveProperty('negativeExamples');
+    expect(workflowInput.context.candidate).not.toHaveProperty('summary');
+    expect(workflowInput.context.candidate).not.toHaveProperty('coreFact');
+    expect(workflowInput.context.candidate).not.toHaveProperty('confidence');
+    expect(workflowInput.context.candidate).not.toHaveProperty('tmaxPostId');
     expect(prisma.topicCircleCandidate.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'candidate_1' },
@@ -125,6 +175,55 @@ describe('TopicCircleService', () => {
           triggerType: 'TC-99',
           eventId: 'event_topic_circle',
           workflowRunId: 'wrun_topic_circle',
+        }),
+      }),
+    );
+    expect(prisma.eventSourceContext.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          eventId: 'event_topic_circle',
+          workflowRunId: 'wrun_topic_circle',
+          sourceType: 'x_topic_circle',
+        }),
+      }),
+    );
+    expect(prisma.eventEvidence.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          eventId: 'event_topic_circle',
+          workflowRunId: 'wrun_topic_circle',
+          sourceType: 'x_topic_circle',
+          url: 'https://x.com/OpenAI/status/post_1',
+          payload: expect.objectContaining({
+            postId: 'post_1',
+            text: 'AI update',
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('does not form events again for candidates that already triggered', async () => {
+    const now = new Date('2026-08-19T10:00:00.000Z');
+    const workflowRunner = {
+      runTopicCircleEventFormation: jest.fn(),
+    };
+    const prisma = {
+      topicCircleCandidate: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const service = new TopicCircleService(prisma as never, {} as never, workflowRunner);
+
+    const result = await service.evaluateTriggers(now);
+
+    expect(result).toEqual({ triggered: 0, refreshed: 0 });
+    expect(workflowRunner.runTopicCircleEventFormation).not.toHaveBeenCalled();
+    expect(prisma.topicCircleCandidate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          triggeredAt: null,
+          eventId: null,
         }),
       }),
     );
@@ -197,6 +296,53 @@ describe('TopicCircleService', () => {
           normalizedEventKey: 'topic-circle:ai-tech:model-release',
           title: 'AI 与科技：模型发布',
           confidence: 0.91,
+        }),
+      }),
+    );
+  });
+
+  it('scopes manual collection to the selected topic circle', async () => {
+    const now = new Date('2026-08-19T12:00:00.000Z');
+    const prisma = {
+      topicCircleAccount: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      topicCircleFetchRun: {
+        create: jest.fn().mockResolvedValue({
+          id: 'tc_fetch_scoped',
+        }),
+        update: jest.fn().mockResolvedValue({
+          id: 'tc_fetch_scoped',
+          accountCount: 0,
+          itemCount: 0,
+          status: 'success',
+          error: null,
+        }),
+      },
+    };
+    const service = new TopicCircleService(prisma as never, {} as never);
+
+    await service.collectAll(now, 'AI 与科技');
+
+    expect(prisma.topicCircleAccount.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          enabled: true,
+          topicCircle: {
+            enabled: true,
+            OR: [{ id: 'AI 与科技' }, { name: 'AI 与科技' }],
+          },
+        }),
+      }),
+    );
+    expect(prisma.topicCircleFetchRun.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          input: expect.objectContaining({
+            circle: 'AI 与科技',
+            accountCount: 0,
+            handles: [],
+          }),
         }),
       }),
     );

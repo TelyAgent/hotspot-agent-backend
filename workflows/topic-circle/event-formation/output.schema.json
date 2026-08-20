@@ -155,7 +155,7 @@
     "topicCircleSourceContext": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["topicCircle", "candidate", "posts", "matchedRules"],
+      "required": ["topicCircle", "candidate", "matchedRules"],
       "properties": {
         "topicCircle": {
           "type": "object",
@@ -172,14 +172,10 @@
           "required": [
             "id",
             "title",
-            "summary",
-            "coreFact",
             "normalizedEventKey",
-            "confidence",
             "b3h",
             "b24h",
             "tmax",
-            "tmaxPostId",
             "tmaxTop5",
             "triggeredAt",
             "eventId",
@@ -188,35 +184,14 @@
           "properties": {
             "id": { "type": "string" },
             "title": { "type": "string" },
-            "summary": { "type": "string" },
-            "coreFact": { "type": "string" },
             "normalizedEventKey": { "type": "string" },
-            "confidence": { "enum": ["high", "medium", "low"], "type": "string" },
             "b3h": { "type": "integer" },
             "b24h": { "type": "integer" },
             "tmax": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
-            "tmaxPostId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
             "tmaxTop5": { "type": "boolean" },
             "triggeredAt": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
             "eventId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
             "ruleVersion": { "type": "string" }
-          }
-        },
-        "posts": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["postId", "authorHandle", "text", "url", "postType", "publishedAt", "metrics"],
-            "properties": {
-              "postId": { "type": "string" },
-              "authorHandle": { "type": "string" },
-              "text": { "type": "string" },
-              "url": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-              "postType": { "type": "string" },
-              "publishedAt": { "type": "string" },
-              "metrics": { "type": "object", "additionalProperties": false, "properties": {} }
-            }
           }
         },
         "matchedRules": { "type": "array", "items": { "$ref": "#/$defs/trigger" } }
@@ -225,12 +200,17 @@
     "evidenceRecord": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sourceType", "claim", "payload"],
+      "required": ["sourceType", "url", "claim", "payload"],
       "properties": {
         "sourceType": { "enum": ["x_topic_circle", "x_post", "manual", "external"], "type": "string" },
         "url": { "type": "string" },
         "claim": { "type": "string" },
-        "payload": {}
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {},
+          "required": []
+        }
       }
     },
     "sourceRef": {
