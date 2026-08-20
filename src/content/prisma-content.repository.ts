@@ -129,6 +129,18 @@ export class PrismaContentRepository implements ContentRepository {
     return event ? mapEventContextPack(event) : undefined;
   }
 
+  async findEventTimingById(id: string) {
+    const event = await this.contentDelegate('event').findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        formedAt: true,
+      },
+    });
+    return event ? mapEventTiming(event) : undefined;
+  }
+
   async createContentCandidateBatch(input: CreateContentCandidateBatchInput) {
     const batch = await this.contentDelegate('contentCandidateBatch').create({
       data: {
@@ -233,6 +245,9 @@ export class PrismaContentRepository implements ContentRepository {
         lastTrackingError: patch.lastTrackingError,
         lastTrackingErrorAt: patch.lastTrackingErrorAt ? new Date(patch.lastTrackingErrorAt) : undefined,
         trackingFailureCount: patch.trackingFailureCount,
+        eventFormedAt: patch.eventFormedAt ? new Date(patch.eventFormedAt) : undefined,
+        urlFilledAt: patch.urlFilledAt ? new Date(patch.urlFilledAt) : undefined,
+        firstPublishLatencyMs: patch.firstPublishLatencyMs,
       },
     });
     return mapPublicationRecord(record);
@@ -256,6 +271,9 @@ export class PrismaContentRepository implements ContentRepository {
         lastTrackingError: input.lastTrackingError,
         lastTrackingErrorAt: input.lastTrackingErrorAt ? new Date(input.lastTrackingErrorAt) : undefined,
         trackingFailureCount: input.trackingFailureCount,
+        eventFormedAt: input.eventFormedAt ? new Date(input.eventFormedAt) : undefined,
+        urlFilledAt: input.urlFilledAt ? new Date(input.urlFilledAt) : undefined,
+        firstPublishLatencyMs: input.firstPublishLatencyMs,
         createdAt: new Date(input.createdAt),
       },
     });
@@ -487,6 +505,9 @@ function mapPublicationRecord(record: unknown): PublicationRecord {
     lastTrackingError: string | null;
     lastTrackingErrorAt: Date | null;
     trackingFailureCount: number;
+    eventFormedAt: Date | null;
+    urlFilledAt: Date | null;
+    firstPublishLatencyMs: number | null;
     createdAt: Date;
   };
   return {
@@ -505,7 +526,23 @@ function mapPublicationRecord(record: unknown): PublicationRecord {
     lastTrackingError: row.lastTrackingError ?? undefined,
     lastTrackingErrorAt: row.lastTrackingErrorAt?.toISOString(),
     trackingFailureCount: row.trackingFailureCount,
+    eventFormedAt: row.eventFormedAt?.toISOString(),
+    urlFilledAt: row.urlFilledAt?.toISOString(),
+    firstPublishLatencyMs: row.firstPublishLatencyMs ?? undefined,
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function mapEventTiming(event: unknown) {
+  const row = event as {
+    id: string;
+    title: string;
+    formedAt: Date;
+  };
+  return {
+    id: row.id,
+    title: row.title,
+    formedAt: row.formedAt.toISOString(),
   };
 }
 

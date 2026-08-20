@@ -127,6 +127,9 @@ model PublicationRecord {
   lastTrackingError String?
   lastTrackingErrorAt DateTime?
   trackingFailureCount Int @default(0)
+  eventFormedAt DateTime?
+  urlFilledAt DateTime?
+  firstPublishLatencyMs Int?
   createdAt      DateTime  @default(now())
 
   @@index([eventId, accountId])

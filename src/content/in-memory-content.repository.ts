@@ -8,6 +8,7 @@ import {
   CreatePublicationMetricInput,
   CreatePublicationRecordInput,
   EventContextPackRecord,
+  EventTimingRecord,
   OperationAccountRecord,
   PublicationMetricRecord,
   PublicationRecord,
@@ -23,6 +24,7 @@ export class InMemoryContentRepository implements ContentRepository {
   readonly publicationMetrics: PublicationMetricRecord[] = [];
   readonly operationAccounts: OperationAccountRecord[] = [];
   readonly events: EventContextPackRecord[] = [];
+  readonly eventTimings: EventTimingRecord[] = [];
 
   findCommandExecutionByIdempotencyKey(idempotencyKey: string): ContentCommandExecutionRecord | undefined {
     return this.commandExecutions.find(
@@ -82,6 +84,10 @@ export class InMemoryContentRepository implements ContentRepository {
 
   findEventContextPackById(id: string): EventContextPackRecord | undefined {
     return this.events.find((event) => event.eventId === id);
+  }
+
+  findEventTimingById(id: string): EventTimingRecord | undefined {
+    return this.eventTimings.find((event) => event.id === id);
   }
 
   createContentCandidateBatch(input: CreateContentCandidateBatchInput): ContentCandidateBatchRecord {
@@ -145,6 +151,9 @@ export class InMemoryContentRepository implements ContentRepository {
       wellPerforming: input.wellPerforming ?? false,
       trackingRuleVersion: input.trackingRuleVersion ?? 'publication-tracking-v1',
       trackingFailureCount: input.trackingFailureCount ?? 0,
+      eventFormedAt: input.eventFormedAt,
+      urlFilledAt: input.urlFilledAt,
+      firstPublishLatencyMs: input.firstPublishLatencyMs,
     };
     this.publicationRecords.push(record);
     return record;

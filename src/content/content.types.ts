@@ -41,6 +41,12 @@ export interface EventContextPackRecord {
   sourceContexts: unknown[];
 }
 
+export interface EventTimingRecord {
+  id: string;
+  title: string;
+  formedAt: string;
+}
+
 export interface AccountResponseTaskRecord {
   id: string;
   eventId: string;
@@ -148,6 +154,9 @@ export interface PublicationRecord {
   lastTrackingError?: string;
   lastTrackingErrorAt?: string;
   trackingFailureCount: number;
+  eventFormedAt?: string;
+  urlFilledAt?: string;
+  firstPublishLatencyMs?: number;
   createdAt: string;
 }
 
@@ -208,6 +217,9 @@ export interface CreatePublicationRecordInput {
   lastTrackingError?: string;
   lastTrackingErrorAt?: string;
   trackingFailureCount?: number;
+  eventFormedAt?: string;
+  urlFilledAt?: string;
+  firstPublishLatencyMs?: number;
   createdAt: string;
 }
 

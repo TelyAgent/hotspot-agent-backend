@@ -8,6 +8,7 @@ import {
   CreatePublicationMetricInput,
   CreatePublicationRecordInput,
   EventContextPackRecord,
+  EventTimingRecord,
   MaybePromise,
   OperationAccountRecord,
   PublicationMetricRecord,
@@ -54,6 +55,7 @@ export interface ContentRepository {
   listOperationAccounts(): MaybePromise<OperationAccountRecord[]>;
   findOperationAccountById(id: string): MaybePromise<OperationAccountRecord | undefined>;
   findEventContextPackById(id: string): MaybePromise<EventContextPackRecord | undefined>;
+  findEventTimingById(id: string): MaybePromise<EventTimingRecord | undefined>;
   createContentCandidateBatch(input: CreateContentCandidateBatchInput): MaybePromise<ContentCandidateBatchRecord>;
   createContentCandidates(input: CreateContentCandidateInput[]): MaybePromise<ContentCandidateRecord[]>;
   findContentCandidateById(id: string): MaybePromise<ContentCandidateRecord | undefined>;
@@ -79,6 +81,9 @@ export interface ContentRepository {
         | 'lastTrackingError'
         | 'lastTrackingErrorAt'
         | 'trackingFailureCount'
+        | 'eventFormedAt'
+        | 'urlFilledAt'
+        | 'firstPublishLatencyMs'
       >
     >,
   ): MaybePromise<PublicationRecord>;

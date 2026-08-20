@@ -6,11 +6,12 @@ import { ContentModule } from './content/content.module';
 import { EventModule } from './event/event.module';
 import { FutureEventsModule } from './future-events/future-events.module';
 import { InsightsModule } from './insights/insights.module';
+import { OverviewModule } from './overview/overview.module';
 import { SettingsModule } from './settings/settings.module';
 import { TopicCircleModule } from './topic-circle/topic-circle.module';
 import { WorkflowModule } from './workflow/workflow.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), CollectionModule, WorkflowModule, AssistantModule, EventModule, FutureEventsModule, SettingsModule, TopicCircleModule, ContentModule, InsightsModule],
+  imports: [ScheduleModule.forRoot(), CollectionModule, WorkflowModule, AssistantModule, EventModule, FutureEventsModule, SettingsModule, TopicCircleModule, ContentModule, InsightsModule, OverviewModule],
 })
 export class AppModule {}

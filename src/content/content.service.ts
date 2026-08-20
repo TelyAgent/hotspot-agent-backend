@@ -227,6 +227,8 @@ export class ContentService {
       throw new BadRequestException('该 URL 已被其他发布记录使用。');
     }
     const now = request.now ?? new Date().toISOString();
+    const eventTiming = await this.contentRepository.findEventTimingById(task.eventId);
+    const firstPublishTiming = resolveFirstPublishTiming(eventTiming?.formedAt, now);
     const publication = await this.contentRepository.createPublicationRecord({
       id: `publication_record_${randomUUID()}`,
       taskId: task.id,
@@ -241,6 +243,9 @@ export class ContentService {
       wellPerforming: false,
       trackingRuleVersion: DEFAULT_PUBLICATION_TRACKING_RULE.version,
       trackingFailureCount: 0,
+      eventFormedAt: firstPublishTiming.eventFormedAt,
+      urlFilledAt: firstPublishTiming.urlFilledAt,
+      firstPublishLatencyMs: firstPublishTiming.firstPublishLatencyMs,
       createdAt: now,
     });
     await Promise.all([
@@ -376,4 +381,20 @@ function highestRisk(results: ContentRiskPrecheckResult[]) {
     blocked: 4,
   };
   return results.reduce((highest, result) => (rank[result.riskStatus] > rank[highest] ? result.riskStatus : highest), 'low');
+}
+
+function resolveFirstPublishTiming(eventFormedAt: string | undefined, urlFilledAt: string) {
+  if (!eventFormedAt) {
+    return { urlFilledAt };
+  }
+  const formedAtMs = new Date(eventFormedAt).getTime();
+  const filledAtMs = new Date(urlFilledAt).getTime();
+  if (!Number.isFinite(formedAtMs) || !Number.isFinite(filledAtMs) || filledAtMs < formedAtMs) {
+    return { eventFormedAt, urlFilledAt };
+  }
+  return {
+    eventFormedAt,
+    urlFilledAt,
+    firstPublishLatencyMs: filledAtMs - formedAtMs,
+  };
 }

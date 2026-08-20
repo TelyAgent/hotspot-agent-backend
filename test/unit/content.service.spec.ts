@@ -327,6 +327,11 @@ describe('ContentService', () => {
       createdAt: '2026-08-20T01:00:00.000Z',
       updatedAt: '2026-08-20T01:15:00.000Z',
     });
+    repository.eventTimings.push({
+      id: 'event_1',
+      title: 'OpenAI 正式发布 GPT-6 API',
+      formedAt: '2026-08-20T01:00:00.000Z',
+    });
     repository.contentCandidates.push(
       {
         id: 'candidate_available',
@@ -392,6 +397,9 @@ describe('ContentService', () => {
         wellPerforming: false,
         trackingRuleVersion: 'publication-tracking-v1',
         trackingFailureCount: 0,
+        eventFormedAt: '2026-08-20T01:00:00.000Z',
+        urlFilledAt: '2026-08-20T01:30:00.000Z',
+        firstPublishLatencyMs: 30 * 60 * 1000,
       }),
     );
     expect(repository.accountResponseTasks[0]).toEqual(expect.objectContaining({ status: 'published' }));
