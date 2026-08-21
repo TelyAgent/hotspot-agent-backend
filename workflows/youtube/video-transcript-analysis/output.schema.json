@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "YoutubeTranscriptAnalysisOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["main_reason", "execution", "replication", "limitations"],
+  "properties": {
+    "main_reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topic", "why_attractive", "traffic_judgment"],
+      "properties": {
+        "topic": { "type": "string", "minLength": 1 },
+        "why_attractive": { "type": "string", "minLength": 1 },
+        "traffic_judgment": { "type": "string", "minLength": 1 }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key_technique", "effect"],
+      "properties": {
+        "key_technique": { "type": "string", "minLength": 1 },
+        "effect": { "type": "string", "minLength": 1 }
+      }
+    },
+    "replication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reusable_mechanism", "product_remix_topic", "product_entry"],
+      "properties": {
+        "reusable_mechanism": { "type": "string", "minLength": 1 },
+        "product_remix_topic": { "type": "string", "minLength": 1 },
+        "product_entry": { "type": "string", "minLength": 1 }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

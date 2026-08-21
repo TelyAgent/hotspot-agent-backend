@@ -10,8 +10,22 @@ import { OverviewModule } from './overview/overview.module';
 import { SettingsModule } from './settings/settings.module';
 import { TopicCircleModule } from './topic-circle/topic-circle.module';
 import { WorkflowModule } from './workflow/workflow.module';
+import { YoutubeModule } from './youtube/youtube.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), CollectionModule, WorkflowModule, AssistantModule, EventModule, FutureEventsModule, SettingsModule, TopicCircleModule, ContentModule, InsightsModule, OverviewModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    CollectionModule,
+    WorkflowModule,
+    AssistantModule,
+    EventModule,
+    FutureEventsModule,
+    SettingsModule,
+    TopicCircleModule,
+    ContentModule,
+    InsightsModule,
+    OverviewModule,
+    YoutubeModule,
+  ],
 })
 export class AppModule {}

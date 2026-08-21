@@ -476,6 +476,126 @@ model Signal {
   @@map("signal")
 }
 
+model YoutubeVideo {
+  id                      String    @id
+  videoId                 String    @unique
+  videoUrl                String
+  title                   String
+  thumbnailUrl            String?
+  publishedAt             DateTime?
+  duration                String?
+  channelId               String?
+  channelTitle            String?
+  firstSeenDate           DateTime
+  lastSeenDate            DateTime
+  consecutiveHotDays      Int       @default(1)
+  boardStatus             String
+  boardVisibleUntil       DateTime
+  reappearanceCount       Int       @default(0)
+  lastReappearanceGapDays Int?
+  lastVideoMetrics        Json?
+  selectionSources        Json
+  matchedKeywords         Json
+  keywordHitCount         Int       @default(0)
+  discoveryLabels         Json
+  pushedAt                DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  observations YoutubeVideoObservation[]
+  jobs         YoutubeAnalysisJob[]
+
+  @@index([boardStatus, boardVisibleUntil])
+  @@index([lastSeenDate])
+  @@map("youtube_video")
+}
+
+model YoutubeVideoObservation {
+  id               String   @id
+  youtubeVideoId   String
+  observedDate     DateTime
+  selectionSources Json
+  matchedKeywords  Json
+  keywordHitCount  Int
+  discoveryLabels  Json
+  videoMetrics     Json?
+  raw              Json?
+  createdAt        DateTime @default(now())
+
+  video YoutubeVideo @relation(fields: [youtubeVideoId], references: [id], onDelete: Cascade)
+
+  @@unique([youtubeVideoId, observedDate])
+  @@index([observedDate])
+  @@map("youtube_video_observation")
+}
+
+model YoutubeAnalysisJob {
+  id                    String    @id
+  youtubeVideoId        String
+  jobKey                String    @unique
+  status                String
+  transcriptStatus      String?
+  transcriptProvider    String?
+  errorMessage          String?
+  productProfileId      String?
+  productProfileVersion String?
+  createdAt             DateTime  @default(now())
+  startedAt             DateTime?
+  finishedAt            DateTime?
+
+  video      YoutubeVideo            @relation(fields: [youtubeVideoId], references: [id], onDelete: Cascade)
+  transcript YoutubeVideoTranscript?
+  result     YoutubeAnalysisResult?
+
+  @@index([status, createdAt])
+  @@map("youtube_analysis_job")
+}
+
+model YoutubeVideoTranscript {
+  id        String   @id
+  jobId     String   @unique
+  provider  String
+  language  String?
+  segments  Json
+  plainText String
+  fetchedAt DateTime @default(now())
+
+  job YoutubeAnalysisJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("youtube_video_transcript")
+}
+
+model YoutubeAnalysisResult {
+  id          String   @id
+  jobId       String   @unique
+  mainReason  Json
+  execution   Json
+  replication Json
+  limitations Json
+  rawOutput   Json?
+  createdAt   DateTime @default(now())
+
+  job YoutubeAnalysisJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("youtube_analysis_result")
+}
+
+model YoutubeRun {
+  id              String    @id
+  runDate         DateTime
+  status          String
+  officialCount   Int       @default(0)
+  keywordCount    Int       @default(0)
+  newVideoCount   Int       @default(0)
+  historicalCount Int       @default(0)
+  errorMessage    String?
+  startedAt       DateTime
+  finishedAt      DateTime?
+
+  @@index([runDate, status])
+  @@map("youtube_run")
+}
+
 model WorkflowDefinition {
   id               String   @id
   workflowId       String
