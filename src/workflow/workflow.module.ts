@@ -5,6 +5,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { EventCommandExecutor } from './event-command.executor';
 import { PrismaWorkflowRepository } from './prisma-workflow.repository';
 import { WorkflowController } from './workflow.controller';
+import { WorkflowGovernanceService } from './workflow-governance.service';
 import { WorkflowLoader } from './workflow-loader';
 import { createWorkflowModelAdapter } from './workflow-model-adapter.factory';
 import { WorkflowOutputValidator } from './workflow-output-validator';
@@ -35,6 +36,7 @@ import { XTrendContextBuilder } from './x-trend-context.builder';
       useFactory: () => createWorkflowModelAdapter(),
     },
     WorkflowOutputValidator,
+    WorkflowGovernanceService,
     XTrendContextBuilder,
     EventCommandExecutor,
     {
@@ -43,6 +45,6 @@ import { XTrendContextBuilder } from './x-trend-context.builder';
     },
     WorkflowRunner,
   ],
-  exports: [WorkflowRunner, WORKFLOW_LOADER, WORKFLOW_MODEL_ADAPTER],
+  exports: [WorkflowRunner, WORKFLOW_LOADER, WORKFLOW_MODEL_ADAPTER, WorkflowGovernanceService],
 })
 export class WorkflowModule {}

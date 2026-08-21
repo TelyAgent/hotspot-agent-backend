@@ -496,6 +496,71 @@ model WorkflowDefinition {
   @@map("workflow_definition")
 }
 
+model WorkflowVersion {
+  id            String    @id
+  workflowId    String
+  version       String
+  source        String
+  status        String
+  title         String
+  markdown      String
+  changeSummary String?
+  riskNotes     Json?
+  baseVersionId String?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  activatedAt   DateTime?
+  archivedAt    DateTime?
+
+  activeWorkflow WorkflowActiveVersion?
+
+  @@unique([workflowId, version])
+  @@index([workflowId, status, createdAt])
+  @@map("workflow_version")
+}
+
+model WorkflowActiveVersion {
+  workflowId  String   @id
+  versionId   String   @unique
+  activatedBy String
+  activatedAt DateTime @default(now())
+  reason      String?
+
+  version WorkflowVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_active_version")
+}
+
+model WorkflowAuditLog {
+  id         String   @id
+  workflowId String
+  versionId  String?
+  action     String
+  actor      String
+  summary    String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId, createdAt])
+  @@map("workflow_audit_log")
+}
+
+model WorkflowTestRun {
+  id                String    @id
+  workflowVersionId String
+  status            String
+  sampleSource      String
+  inputSummary      Json?
+  modelOutputSummary Json?
+  errorMessage      String?
+  dryRunResult      Json?
+  startedAt         DateTime
+  finishedAt        DateTime?
+
+  @@index([workflowVersionId, startedAt])
+  @@map("workflow_test_run")
+}
+
 model WorkflowRun {
   id                   String    @id
   workflowDefinitionId String

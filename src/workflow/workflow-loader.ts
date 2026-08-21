@@ -13,6 +13,10 @@ export class WorkflowLoader {
   constructor(private readonly rootDir = process.cwd()) {}
 
   async load(workflowId: string, groupPath = 'event-formation'): Promise<LoadedWorkflow> {
+    return this.loadSystem(workflowId, groupPath);
+  }
+
+  async loadSystem(workflowId: string, groupPath = 'event-formation'): Promise<LoadedWorkflow> {
     const basePath = join(this.rootDir, 'workflows', groupPath, workflowId);
     const markdownPath = join(basePath, 'WORKFLOW.md');
     const outputSchemaPath = join(basePath, 'output.schema.json');

@@ -10,8 +10,8 @@ import { XTrendContextBuilder } from '../../src/workflow/x-trend-context.builder
 describe('WorkflowRunner', () => {
   it('loads topic circle event formation workflow from the topic-circle folder', async () => {
     const workflowRepository = new InMemoryWorkflowRepository();
-    const loader = {
-      load: jest.fn().mockResolvedValue({
+    const workflowGovernance = {
+      loadExecutableWorkflow: jest.fn().mockResolvedValue({
         definition: {
           id: 'wdef_topic_circle',
           workflowId: 'topic-circle-event-formation',
@@ -38,7 +38,7 @@ describe('WorkflowRunner', () => {
     }));
     const runner = new WorkflowRunner(
       workflowRepository,
-      loader as never,
+      workflowGovernance as never,
       new XTrendContextBuilder(new InMemoryCollectionRepository()),
       adapter,
       new WorkflowOutputValidator(),
@@ -53,7 +53,7 @@ describe('WorkflowRunner', () => {
       },
     });
 
-    expect(loader.load).toHaveBeenCalledWith('event-formation', 'topic-circle');
+    expect(workflowGovernance.loadExecutableWorkflow).toHaveBeenCalledWith('event-formation', 'topic-circle');
   });
 
   it('loads markdown workflow, delegates event decisions to the model, and executes returned commands', async () => {
@@ -83,6 +83,12 @@ describe('WorkflowRunner', () => {
     ]);
 
     const workflowRepository = new InMemoryWorkflowRepository();
+    const loader = new WorkflowLoader(process.cwd());
+    const workflowGovernance = {
+      loadExecutableWorkflow: jest.fn((workflowId: string, groupPath?: string) =>
+        loader.loadSystem(workflowId, groupPath),
+      ),
+    };
     const adapter = new FakeWorkflowModelAdapter((input) => ({
       schemaVersion: 'event_workflow_commands_v1',
       workflowId: input.workflowId,
@@ -137,7 +143,7 @@ describe('WorkflowRunner', () => {
 
     const runner = new WorkflowRunner(
       workflowRepository,
-      new WorkflowLoader(process.cwd()),
+      workflowGovernance as never,
       new XTrendContextBuilder(collectionRepository),
       adapter,
       new WorkflowOutputValidator(),

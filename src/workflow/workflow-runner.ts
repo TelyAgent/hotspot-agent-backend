@@ -2,13 +2,13 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   EVENT_COMMAND_EXECUTOR,
-  WORKFLOW_LOADER,
   WORKFLOW_MODEL_ADAPTER,
   WORKFLOW_REPOSITORY,
 } from './workflow.tokens';
 import { EventCommandExecutor } from './event-command.executor';
-import { LoadedWorkflow, WorkflowLoader } from './workflow-loader';
+import { LoadedWorkflow } from './workflow-loader';
 import { WorkflowModelAdapter, WorkflowModelContext } from './workflow-model.adapter';
+import { WorkflowGovernanceService } from './workflow-governance.service';
 import { WorkflowOutputValidator } from './workflow-output-validator';
 import { WorkflowRepository } from './workflow.repository';
 import {
@@ -42,7 +42,7 @@ export class WorkflowRunner {
 
   constructor(
     @Inject(WORKFLOW_REPOSITORY) private readonly workflowRepository: WorkflowRepository,
-    @Inject(WORKFLOW_LOADER) private readonly workflowLoader: WorkflowLoader,
+    private readonly workflowGovernance: WorkflowGovernanceService,
     private readonly xTrendContextBuilder: XTrendContextBuilder,
     @Inject(WORKFLOW_MODEL_ADAPTER) private readonly modelAdapter: WorkflowModelAdapter,
     private readonly outputValidator: WorkflowOutputValidator,
@@ -50,7 +50,7 @@ export class WorkflowRunner {
   ) {}
 
   async runXTrendEventFormation(input: RunXTrendEventFormationInput): Promise<WorkflowRunResult> {
-    const loadedWorkflow = await this.workflowLoader.load('x-trend-event-formation');
+    const loadedWorkflow = await this.workflowGovernance.loadExecutableWorkflow('x-trend-event-formation');
     const workflowDefinition = await this.workflowRepository.saveWorkflowDefinition(loadedWorkflow.definition);
     const observedAt = input.observedAt ?? new Date().toISOString();
     const workflowRunId = `wrun_${randomUUID()}`;
@@ -81,7 +81,7 @@ export class WorkflowRunner {
   }
 
   async runTopicCircleEventFormation(input: RunTopicCircleEventFormationInput): Promise<WorkflowRunResult> {
-    const loadedWorkflow = await this.workflowLoader.load('event-formation', 'topic-circle');
+    const loadedWorkflow = await this.workflowGovernance.loadExecutableWorkflow('event-formation', 'topic-circle');
     const workflowDefinition = await this.workflowRepository.saveWorkflowDefinition(loadedWorkflow.definition);
     const observedAt = input.observedAt ?? new Date().toISOString();
     const workflowRunId = `wrun_${randomUUID()}`;
