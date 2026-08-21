@@ -13,6 +13,12 @@ interface TriggerView {
   reason: string;
 }
 
+interface EvidenceView {
+  sourceType: string;
+  claim: string;
+  url?: string;
+}
+
 @Injectable()
 export class EventListService {
   constructor(private readonly prisma: PrismaService) {}
@@ -58,6 +64,14 @@ export class EventListService {
         const trigger = this.asTrigger(intakePayload.trigger) ?? this.asTriggers(contextPayload.matchedRules)[0];
         const matchedRules = this.asTriggers(contextPayload.matchedRules);
         const regions = this.asRegions(contextPayload.regions);
+        const evidence = this.buildEvidence(
+          event.evidence.map((item) => ({
+            sourceType: item.sourceType,
+            claim: item.claim,
+            url: item.url ?? undefined,
+          })),
+          contextPayload,
+        );
 
         return {
           id: event.id,
@@ -67,7 +81,8 @@ export class EventListService {
           verify: this.toDisplayVerify(latestIntake?.confirmationLevel),
           regions: regions.join('、'),
           trigger: trigger ? `${trigger.ruleId}：${trigger.reason}` : '',
-          urls: event.evidence.map((item) => item.url).filter((url): url is string => Boolean(url)),
+          urls: evidence.map((item) => item.url).filter((url): url is string => Boolean(url)),
+          evidence,
           related: [],
           confidence: event.confidence,
           normalizedEventKey: event.normalizedEventKey,
@@ -145,5 +160,37 @@ export class EventListService {
           .filter((region): region is string => typeof region === 'string' && region.length > 0),
       ),
     ];
+  }
+
+  private buildEvidence(records: EvidenceView[], contextPayload: Record<string, unknown>): EvidenceView[] {
+    if (records.length > 0) {
+      return records;
+    }
+    return this.asTrendRegionEvidence(contextPayload.regions);
+  }
+
+  private asTrendRegionEvidence(value: unknown): EvidenceView[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .map((item) => {
+        const record = this.asRecord(item);
+        const region = record.region;
+        const rank = record.rank;
+        const previousRank = record.previousRank;
+        const snapshotId = record.snapshotId;
+        if (typeof region !== 'string' || typeof rank !== 'number') {
+          return undefined;
+        }
+        const rankDelta = typeof previousRank === 'number' ? previousRank - rank : undefined;
+        const deltaText = typeof rankDelta === 'number' && rankDelta > 0 ? `，较上次成功快照上升 ${rankDelta} 位` : '';
+        const snapshotText = typeof snapshotId === 'string' && snapshotId.length > 0 ? `（${snapshotId}）` : '';
+        return {
+          sourceType: 'x_trend',
+          claim: `${region} 热搜榜排名 #${rank}${deltaText}${snapshotText}`,
+        };
+      })
+      .filter((item): item is EvidenceView => Boolean(item));
   }
 }

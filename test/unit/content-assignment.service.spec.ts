@@ -145,4 +145,81 @@ describe('ContentAssignmentService', () => {
     ]);
     expect(repository.contentCandidates).toHaveLength(0);
   });
+
+  it('uses the source workflow command id for every account assignment execution', async () => {
+    const repository = new InMemoryContentRepository();
+    repository.events.push({
+      eventId: 'event_1',
+      title: 'Fed rate decision moves markets',
+      oneLineSummary: 'The Fed rate decision is trending on X.',
+      status: 'responding',
+      confirmationLevel: 'partially_supported',
+      expressionBoundary: 'Treat market interpretation as developing.',
+      confirmedFacts: ['The Fed decision is a live market topic.'],
+      unconfirmedFacts: [],
+      evidenceRecords: [{ sourceType: 'x_trend', claim: 'Fed decision entered X trends.' }],
+      sourceContexts: [],
+    });
+    repository.operationAccounts.push(
+      {
+        id: 'operation_account_flash',
+        key: 'respond-with-breaking-brief',
+        name: '快讯型',
+        enabled: true,
+        fields: {
+          type: '基础生产线',
+          skill: 'respond-with-breaking-brief',
+        },
+      },
+      {
+        id: 'operation_account_deep',
+        key: 'develop-hotspot-deep-dive',
+        name: '长文/深度分析型',
+        enabled: true,
+        fields: {
+          type: '基础生产线',
+          skill: 'develop-hotspot-deep-dive',
+        },
+      },
+      {
+        id: 'operation_account_persona',
+        key: 'unusual-whales',
+        name: 'Unusual Whales',
+        enabled: true,
+        fields: {
+          type: '人设账号',
+          skill: 'unusual-whales',
+        },
+      },
+    );
+    const executor = {
+      execute: jest.fn().mockResolvedValue({ status: 'success' }),
+    };
+    const decider: ContentAssignmentDecider = {
+      decide: jest.fn().mockResolvedValue([
+        {
+          accountId: 'operation_account_persona',
+          decision: 'participate',
+          reason: 'The event matches market impact.',
+          priority: 'high',
+        },
+      ]),
+    };
+    const service = new ContentAssignmentService(repository, executor as never, decider);
+
+    await service.startForEvent({
+      eventId: 'event_1',
+      workflowRunId: 'wrun_event',
+      workflowCommandId: 'cmd_create_event',
+      triggerReason: 'TR-01 top five trend',
+      now: '2026-08-20T04:00:00.000Z',
+    });
+
+    expect(executor.execute).toHaveBeenCalledTimes(3);
+    expect(executor.execute.mock.calls.map(([input]) => input.workflowCommandId)).toEqual([
+      'cmd_create_event',
+      'cmd_create_event',
+      'cmd_create_event',
+    ]);
+  });
 });

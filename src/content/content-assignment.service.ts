@@ -44,7 +44,7 @@ export class ContentAssignmentService {
 
       const execution = await this.contentCommandExecutor.execute({
         workflowRunId: input.workflowRunId,
-        workflowCommandId: `${input.workflowCommandId}:${account.id}`,
+        workflowCommandId: input.workflowCommandId,
         command: {
           type: 'create_content_task',
           idempotencyKey: `content_task:${input.eventId}:${account.id}`,
@@ -92,7 +92,7 @@ export class ContentAssignmentService {
           }
           const execution = await this.contentCommandExecutor.execute({
             workflowRunId: input.workflowRunId,
-            workflowCommandId: `${input.workflowCommandId}:${account.id}`,
+            workflowCommandId: input.workflowCommandId,
             command: {
               type: 'create_content_task',
               idempotencyKey: `content_task:${input.eventId}:${account.id}`,

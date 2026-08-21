@@ -100,6 +100,103 @@ describe('EventCommandExecutor', () => {
     expect(repository.eventEvidence).toHaveLength(1);
   });
 
+  it('enriches created X trend events with representative posts after event formation', async () => {
+    const repository = new InMemoryWorkflowRepository();
+    const tools = {
+      invoke: jest.fn().mockResolvedValue({
+        platform: 'x',
+        sourceType: 'post',
+        query: 'AI enters top trends',
+        queryType: 'Top',
+        collectedAt: '2026-08-18T02:06:00.000Z',
+        posts: [
+          {
+            postId: 'post_1',
+            authorHandle: 'source1',
+            text: 'AI enters top trends representative discussion.',
+            url: 'https://x.com/source1/status/post_1',
+            postType: 'original',
+            publishedAt: '2026-08-18T02:00:00.000Z',
+            metrics: { views: 1200, likes: 10 },
+            raw: {},
+          },
+        ],
+      }),
+    };
+    const executor = new EventCommandExecutor(repository, undefined, tools as never);
+    const command: CreateEventCommand = {
+      type: 'create_event',
+      idempotencyKey: 'create:ai:enrich',
+      eventCandidate: {
+        title: 'AI enters top trends',
+        oneLineSummary: 'AI enters the United States X trend top five.',
+        normalizedEventKey: 'ai-enters-top-trends-enrich',
+        confidence: 'high',
+      },
+      eventIntake: {
+        schemaVersion: 'event_intake_v1',
+        entryMode: 'x_trend',
+        observedAt: '2026-08-18T02:05:00.000Z',
+        t0: '2026-08-18T02:05:00.000Z',
+        title: 'AI enters top trends',
+        oneLineSummary: 'AI enters the United States X trend top five.',
+        confirmationLevel: 'unconfirmed',
+        expressionBoundary: 'X trend only',
+        confirmedFacts: [],
+        unconfirmedFacts: ['AI is trending on X'],
+        evidenceRecords: [],
+        trendContext: { regions: [] },
+        trigger: {
+          ruleId: 'TR-01',
+          reason: 'Top five',
+          t0: '2026-08-18T02:05:00.000Z',
+          observedAt: '2026-08-18T02:05:00.000Z',
+        },
+        candidateEventIds: [],
+        dedupeKey: 'ai-enters-top-trends-enrich',
+      },
+      trigger: {
+        ruleId: 'TR-01',
+        reason: 'Top five',
+        t0: '2026-08-18T02:05:00.000Z',
+        observedAt: '2026-08-18T02:05:00.000Z',
+      },
+      sourceContext: {
+        regions: [{ region: 'United States', rank: 4, snapshotId: 'snapshot_us_new' }],
+        matchedRules: [],
+      },
+      evidenceRecords: [],
+      startResponsePipeline: false,
+    };
+
+    const execution = await executor.execute({
+      workflowRunId: 'wrun_test',
+      workflowCommandId: 'cmd_create',
+      command,
+      now: '2026-08-18T02:06:00.000Z',
+    });
+
+    expect(execution.status).toBe('success');
+    expect(tools.invoke).toHaveBeenCalledWith('x.searchPosts', {
+      query: 'AI enters top trends',
+      queryType: 'Top',
+      limit: 3,
+      now: '2026-08-18T02:06:00.000Z',
+    });
+    expect(repository.eventEvidence).toEqual([
+      expect.objectContaining({
+        sourceType: 'x_post',
+        url: 'https://x.com/source1/status/post_1',
+        claim: 'source1 发布了与「AI enters top trends」相关的代表帖。',
+        payload: expect.objectContaining({
+          postId: 'post_1',
+          text: 'AI enters top trends representative discussion.',
+          query: 'AI enters top trends',
+        }),
+      }),
+    ]);
+  });
+
   it('starts the content response pipeline after creating an event that requests response', async () => {
     const repository = new InMemoryWorkflowRepository();
     const responseStarter = {
