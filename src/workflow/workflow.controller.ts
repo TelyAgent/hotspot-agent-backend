@@ -1,6 +1,8 @@
-import { Body, Controller, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
 import { CollectionRepository } from '../collection/collection.repository';
 import { COLLECTION_REPOSITORY } from '../collection/collection.tokens';
+import { WORKFLOW_LOADER } from './workflow.tokens';
+import { WorkflowLoader } from './workflow-loader';
 import { WorkflowRunner } from './workflow-runner';
 
 interface RunXTrendWorkflowBody {
@@ -12,9 +14,20 @@ interface RunXTrendWorkflowBody {
 export class WorkflowController {
   constructor(
     private readonly workflowRunner: WorkflowRunner,
+    @Inject(WORKFLOW_LOADER)
+    private readonly workflowLoader: WorkflowLoader,
     @Inject(COLLECTION_REPOSITORY)
     private readonly collectionRepository: CollectionRepository,
   ) {}
+
+  @Get('event-formation/x-trend/document')
+  async getXTrendEventFormationDocument() {
+    const loadedWorkflow = await this.workflowLoader.load('x-trend-event-formation', 'event-formation');
+    return {
+      definition: loadedWorkflow.definition,
+      markdown: loadedWorkflow.markdown,
+    };
+  }
 
   @Post('event-formation/x-trend/run')
   async runXTrendEventFormation(@Body() body: RunXTrendWorkflowBody = {}) {
