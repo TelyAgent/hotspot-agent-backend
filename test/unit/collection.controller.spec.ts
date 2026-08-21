@@ -90,4 +90,24 @@ describe('CollectionController', () => {
     expect(updated.variables.trendEventWorkflowId).toBe('custom-trend-workflow');
     expect(trendJob?.schedule).toEqual({ type: 'cron', value: '0 */4 * * *' });
   });
+
+  it('syncs Twitter trend collection interval from platform settings to the trend job', async () => {
+    const repository = new InMemoryCollectionRepository(createDefaultCollectionState());
+    const tools = new ToolRegistry();
+    createMockTwitterTools().forEach((tool) => tools.register(tool));
+    const service = new TwitterCollectionService(repository, tools);
+    const controller = new CollectionController(repository, service);
+
+    const updated = await controller.updatePlatformConfig('x', {
+      variables: {
+        regions: ['global'],
+        defaultTrendLimit: 30,
+        trendCollectionIntervalMs: 4 * 60 * 60 * 1000,
+      },
+    });
+    const trendJob = await repository.findJobConfig('x-trending-default');
+
+    expect(updated.variables.trendCollectionIntervalMs).toBe(4 * 60 * 60 * 1000);
+    expect(trendJob?.schedule).toEqual({ type: 'interval', value: String(4 * 60 * 60 * 1000) });
+  });
 });

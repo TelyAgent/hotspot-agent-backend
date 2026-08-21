@@ -110,6 +110,7 @@ export function createDefaultCollectionState(): CollectionState {
           topicNegativeKeywords: ['scam'],
           topicConfigs: DEFAULT_TOPIC_CONFIGS,
           trendCollectionCron: '0 */2 * * *',
+          trendCollectionIntervalMs: 2 * 60 * 60 * 1000,
           trendEventWorkflowId: 'x-trend-event-formation',
           defaultTrendLimit: 30,
           defaultPostLimit: 3,
@@ -159,7 +160,7 @@ export function mergePlatformCollectionConfigDefaults(
       variables: {
         ...defaults.variables,
         ...existing.variables,
-        defaultTrendLimit: defaults.variables.defaultTrendLimit,
+        defaultTrendLimit: existing.variables.defaultTrendLimit ?? defaults.variables.defaultTrendLimit,
         regions: variableRegions,
         regionWoeids: {
         ...(defaults.variables.regionWoeids ?? {}),

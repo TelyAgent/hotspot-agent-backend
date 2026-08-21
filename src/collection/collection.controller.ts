@@ -49,9 +49,14 @@ export class CollectionController {
     @Body() body: UpdatePlatformConfigBody,
   ) {
     const updated = await this.repository.updatePlatformConfig(platform, body);
+    const trendCollectionIntervalMs = body.variables?.trendCollectionIntervalMs;
     const trendCollectionCron = body.variables?.trendCollectionCron;
 
-    if (platform === 'x' && typeof trendCollectionCron === 'string' && trendCollectionCron.trim()) {
+    if (platform === 'x' && typeof trendCollectionIntervalMs === 'number' && trendCollectionIntervalMs > 0) {
+      await this.repository.updateJobConfig('x-trending-default', {
+        schedule: { type: 'interval', value: String(Math.trunc(trendCollectionIntervalMs)) },
+      });
+    } else if (platform === 'x' && typeof trendCollectionCron === 'string' && trendCollectionCron.trim()) {
       await this.repository.updateJobConfig('x-trending-default', {
         schedule: { type: 'cron', value: trendCollectionCron.trim() },
       });

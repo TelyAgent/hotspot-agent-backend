@@ -4,7 +4,7 @@ import {
 } from '../../src/collection/default-collection-state';
 
 describe('mergePlatformCollectionConfigDefaults', () => {
-  it('adds new default X trend regions and enforces the Top 30 trend limit while preserving custom variables', () => {
+  it('adds new default X trend regions while preserving custom trend limit and variables', () => {
     const defaults = createDefaultCollectionState().platformConfigs[0];
     const merged = mergePlatformCollectionConfigDefaults(
       {
@@ -28,7 +28,7 @@ describe('mergePlatformCollectionConfigDefaults', () => {
     expect(merged.enabled).toBe(false);
     expect(merged.connectorId).toBe('custom-connector');
     expect(merged.variables.monitoredAccounts).toEqual(['custom']);
-    expect(merged.variables.defaultTrendLimit).toBe(30);
+    expect(merged.variables.defaultTrendLimit).toBe(10);
     expect(merged.defaultRegions).toEqual(['global', 'United States', 'United Kingdom', 'Japan', 'Korea']);
     expect(merged.variables.regions).toEqual(['global', 'United States', 'United Kingdom', 'Japan', 'Korea']);
     expect(merged.variables.regionWoeids).toEqual({
