@@ -17,6 +17,9 @@ export interface PublicationMetricsCollector {
   collect(publication: PublicationRecord, now: string): Promise<CollectedPublicationMetrics | undefined>;
 }
 
+const TRACKING_POST_LOOKBACK_DAYS = 14;
+const TRACKING_POST_MAX_PAGES = 10;
+
 @Injectable()
 export class ToolRegistryPublicationMetricsCollector implements PublicationMetricsCollector {
   constructor(@Inject(ToolRegistry) private readonly tools: ToolRegistry) {}
@@ -28,8 +31,9 @@ export class ToolRegistryPublicationMetricsCollector implements PublicationMetri
     }
     const output = await this.tools.invoke<XGetAccountPostsToolOutput>('x.getAccountPosts', {
       handle: parsed.handle,
-      since: publication.publishedAt,
-      maxPages: 3,
+      since: trackingPostLookbackSince(publication.publishedAt),
+      until: now,
+      maxPages: TRACKING_POST_MAX_PAGES,
       includeReplies: true,
       includeQuotes: true,
       includeReposts: true,
@@ -40,7 +44,7 @@ export class ToolRegistryPublicationMetricsCollector implements PublicationMetri
       return candidate.postId === parsed.statusId || candidateUrl?.statusId === parsed.statusId;
     });
     if (!post) {
-      return undefined;
+      throw new Error(`未在账号 ${parsed.handle} 最近 ${TRACKING_POST_LOOKBACK_DAYS} 天时间线中找到回填帖子 ${parsed.statusId}`);
     }
     return {
       capturedAt: output.collectedAt,
@@ -52,6 +56,12 @@ export class ToolRegistryPublicationMetricsCollector implements PublicationMetri
       raw: post.raw,
     };
   }
+}
+
+function trackingPostLookbackSince(value: string) {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return value;
+  return new Date(timestamp - TRACKING_POST_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function parseXPostUrl(url: string) {

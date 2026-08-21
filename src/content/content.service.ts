@@ -342,6 +342,7 @@ export class ContentService {
       eventId: task.eventId,
       eventTitle: eventContextPack?.title ?? task.eventId,
       eventSummary: eventContextPack?.oneLineSummary,
+      eventEvidence: eventContextPack?.evidenceRecords ?? [],
       accountId: task.accountId,
       accountName: account?.name ?? task.accountId,
       status: task.status,
