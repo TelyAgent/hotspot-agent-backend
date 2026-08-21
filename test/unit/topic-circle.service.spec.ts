@@ -229,6 +229,83 @@ describe('TopicCircleService', () => {
     );
   });
 
+  it('returns candidate post details for topic expansion', async () => {
+    const now = new Date('2026-08-19T10:00:00.000Z');
+    const prisma = {
+      topicCircleCandidate: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'candidate_1',
+            title: 'AI 模型发布讨论',
+            summary: '多个账号讨论模型发布。',
+            coreFact: 'AI 主题圈账号正在讨论模型发布',
+            b3h: 2,
+            b24h: 4,
+            tmax: 1.5,
+            tmaxTop5: false,
+            eventId: null,
+            triggeredAt: null,
+            triggerType: null,
+            createdAt: now,
+            updatedAt: now,
+            topicCircle: { name: 'AI 与科技' },
+            posts: [
+              {
+                postId: 'post_1',
+                handle: 'OpenAI',
+                publishedAt: now,
+                post: {
+                  postId: 'post_1',
+                  authorHandle: 'OpenAI',
+                  authorName: 'OpenAI',
+                  text: 'We released a new model.',
+                  url: 'https://x.com/OpenAI/status/post_1',
+                  postType: 'original',
+                  publishedAt: now,
+                  metrics: { views: 1200, likes: 100, replies: 5, reposts: 9 },
+                },
+              },
+            ],
+          },
+        ]),
+      },
+      xTopicCirclePost: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            postId: 'post_1',
+            authorHandle: 'OpenAI',
+            authorName: 'OpenAI',
+            text: 'We released a new model.',
+            url: 'https://x.com/OpenAI/status/post_1',
+            postType: 'original',
+            publishedAt: now,
+            metrics: { views: 1200, likes: 100, replies: 5, reposts: 9 },
+          },
+        ]),
+      },
+    };
+    const service = new TopicCircleService(prisma as never, {} as never);
+
+    await expect(service.listCandidates('AI 与科技')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'candidate_1',
+        postIds: ['post_1'],
+        posts: [
+          {
+            postId: 'post_1',
+            authorHandle: 'OpenAI',
+            authorName: 'OpenAI',
+            text: 'We released a new model.',
+            url: 'https://x.com/OpenAI/status/post_1',
+            postType: 'original',
+            publishedAt: now.toISOString(),
+            metrics: { views: 1200, likes: 100, replies: 5, reposts: 9 },
+          },
+        ],
+      }),
+    ]);
+  });
+
   it('uses topic clustering workflow output before falling back to keyword grouping', async () => {
     const now = new Date('2026-08-19T11:00:00.000Z');
     const clusteringRunner = {

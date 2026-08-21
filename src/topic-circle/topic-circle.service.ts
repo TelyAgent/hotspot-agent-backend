@@ -413,6 +413,13 @@ export class TopicCircleService implements OnModuleInit {
       },
       orderBy: { updatedAt: 'desc' },
     });
+    const postIds = [...new Set(candidates.flatMap((candidate) => candidate.posts.map((post) => post.postId)))];
+    const posts = postIds.length
+      ? await this.prisma.xTopicCirclePost.findMany({
+          where: { postId: { in: postIds } },
+        })
+      : [];
+    const postMap = new Map(posts.map((post) => [post.postId, post]));
 
     return candidates.map((candidate) => ({
       id: candidate.id,
@@ -421,6 +428,19 @@ export class TopicCircleService implements OnModuleInit {
       summary: candidate.summary,
       coreFact: candidate.coreFact,
       postIds: candidate.posts.map((post) => post.postId),
+      posts: candidate.posts.map((candidatePost) => {
+        const post = postMap.get(candidatePost.postId);
+        return {
+          postId: candidatePost.postId,
+          authorHandle: post?.authorHandle ?? candidatePost.handle,
+          authorName: post?.authorName ?? null,
+          text: post?.text ?? '',
+          url: post?.url ?? null,
+          postType: post?.postType ?? null,
+          publishedAt: (post?.publishedAt ?? candidatePost.publishedAt).toISOString(),
+          metrics: post?.metrics ?? null,
+        };
+      }),
       b3h: candidate.b3h,
       b24h: candidate.b24h,
       tmax: candidate.tmax,

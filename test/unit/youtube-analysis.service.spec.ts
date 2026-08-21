@@ -45,4 +45,26 @@ describe('YoutubeAnalysisService output validation', () => {
 
     expect(validateYoutubeAnalysisOutput(output).success).toBe(false);
   });
+
+  it('rejects analysis output that is not written in Chinese', () => {
+    const output = {
+      main_reason: {
+        topic: 'The video explains a market trend.',
+        why_attractive: 'It is timely and surprising.',
+        traffic_judgment: 'Topic is the main driver.',
+      },
+      execution: {
+        key_technique: 'Clear opening hook.',
+        effect: 'It helps retention.',
+      },
+      replication: {
+        reusable_mechanism: 'Frame a complex trend as a simple question.',
+        product_remix_topic: 'Use the product to monitor market changes.',
+        product_entry: 'Introduce the product through manual monitoring pain.',
+      },
+      limitations: ['Transcript-only analysis.'],
+    };
+
+    expect(validateYoutubeAnalysisOutput(output).success).toBe(false);
+  });
 });

@@ -28,12 +28,36 @@ const youtubeAnalysisOutputSchema = z
       .strict(),
     limitations: z.array(z.string()),
   })
-  .strict();
+  .strict()
+  .refine((output) => isChineseAnalysisOutput(output), {
+    message: 'YouTube 字幕拆解输出必须使用中文',
+  });
 
 export type YoutubeAnalysisOutput = z.infer<typeof youtubeAnalysisOutputSchema>;
 
 export function validateYoutubeAnalysisOutput(output: unknown) {
   return youtubeAnalysisOutputSchema.safeParse(output);
+}
+
+function isChineseAnalysisOutput(output: {
+  main_reason: { topic: string; why_attractive: string; traffic_judgment: string };
+  execution: { key_technique: string; effect: string };
+  replication: { reusable_mechanism: string; product_remix_topic: string; product_entry: string };
+  limitations: string[];
+}) {
+  const text = [
+    output.main_reason.topic,
+    output.main_reason.why_attractive,
+    output.main_reason.traffic_judgment,
+    output.execution.key_technique,
+    output.execution.effect,
+    output.replication.reusable_mechanism,
+    output.replication.product_remix_topic,
+    output.replication.product_entry,
+    ...output.limitations,
+  ].join('');
+  const chineseCharCount = [...text].filter((char) => /[\u4e00-\u9fff]/.test(char)).length;
+  return chineseCharCount >= 12;
 }
 
 @Injectable()
